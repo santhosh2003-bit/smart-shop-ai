@@ -1,13 +1,24 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import React from 'react';
+import { Helmet } from 'react-helmet-async';
+import Layout from '@/components/layout/Layout';
+import HeroSection from '@/components/home/HeroSection';
+import DealsSection from '@/components/home/DealsSection';
+import CategoriesSection from '@/components/home/CategoriesSection';
+import StoresSection from '@/components/home/StoresSection';
 
-const Index = () => {
+const Index: React.FC = () => {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
-    </div>
+    <Layout>
+      <Helmet>
+        <title>DealFinder - Find the Best Deals Near You</title>
+        <meta name="description" content="Discover amazing deals and offers from stores near you. AI-powered product search with fast delivery and live tracking." />
+      </Helmet>
+      
+      <HeroSection />
+      <DealsSection />
+      <CategoriesSection />
+      <StoresSection />
+    </Layout>
   );
 };
 
