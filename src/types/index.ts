@@ -24,6 +24,11 @@ export interface Store {
   deliveryTime: string;
   address: string;
   isOpen: boolean;
+  ownerId?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  description?: string;
+  phone?: string;
+  email?: string;
 }
 
 export interface CartItem {

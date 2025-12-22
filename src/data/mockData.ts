@@ -11,6 +11,8 @@ export const stores: Store[] = [
     deliveryTime: '10-15 min',
     address: '123 Market Street, Downtown',
     isOpen: true,
+    status: 'approved',
+    ownerId: '2',
   },
   {
     id: '2',
@@ -22,6 +24,7 @@ export const stores: Store[] = [
     deliveryTime: '15-20 min',
     address: '456 Commerce Ave, Midtown',
     isOpen: true,
+    status: 'approved',
   },
   {
     id: '3',
@@ -33,6 +36,7 @@ export const stores: Store[] = [
     deliveryTime: '8-12 min',
     address: '789 Green Lane, Uptown',
     isOpen: true,
+    status: 'approved',
   },
 ];
 
