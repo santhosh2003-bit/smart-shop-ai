@@ -39,6 +39,7 @@ const Header: React.FC = () => {
           </div>
           <div className="hidden md:flex items-center gap-4">
             <Link to="/history" className="flex items-center gap-1 hover:text-primary transition-colors"><History className="w-4 h-4" />Order History</Link>
+            {user?.role === 'store_owner' && <Link to="/store-dashboard" className="flex items-center gap-1 hover:text-primary transition-colors text-primary font-medium"><Settings className="w-4 h-4" />My Store</Link>}
             {user?.role === 'admin' && <Link to="/admin" className="flex items-center gap-1 hover:text-primary transition-colors text-accent font-medium"><Settings className="w-4 h-4" />Admin</Link>}
           </div>
         </div>
@@ -67,6 +68,7 @@ const Header: React.FC = () => {
                   <div className="px-2 py-1.5"><p className="font-medium">{user?.name}</p><p className="text-xs text-muted-foreground">{user?.email}</p></div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => navigate('/history')}>Order History</DropdownMenuItem>
+                  {user?.role === 'store_owner' && <DropdownMenuItem onClick={() => navigate('/store-dashboard')}>My Store</DropdownMenuItem>}
                   {user?.role === 'admin' && <DropdownMenuItem onClick={() => navigate('/admin')}>Admin Panel</DropdownMenuItem>}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={logout} className="text-destructive"><LogOut className="w-4 h-4 mr-2" />Logout</DropdownMenuItem>
