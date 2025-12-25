@@ -11,12 +11,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useStore } from '@/context/StoreContext';
+import { useNotifications } from '@/context/NotificationContext';
 import { Store } from '@/types';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
+import ImageUpload from '@/components/ui/ImageUpload';
 
 const AdminStores: React.FC = () => {
   const { stores, addStore, updateStore, deleteStore, approveStore, rejectStore, getPendingStores, getApprovedStores } = useStore();
+  const { addNotification } = useNotifications();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -30,10 +33,11 @@ const AdminStores: React.FC = () => {
     phone: '',
     email: '',
     logo: '',
+    deliveryLocations: '',
   });
 
   const resetForm = () => {
-    setFormData({ name: '', address: '', deliveryTime: '', distance: '', description: '', phone: '', email: '', logo: '' });
+    setFormData({ name: '', address: '', deliveryTime: '', distance: '', description: '', phone: '', email: '', logo: '', deliveryLocations: '' });
     setEditingStore(null);
   };
 
@@ -49,6 +53,7 @@ const AdminStores: React.FC = () => {
         phone: store.phone || '',
         email: store.email || '',
         logo: store.logo || '',
+        deliveryLocations: store.deliveryLocations?.join(', ') || '',
       });
     } else {
       resetForm();
@@ -60,6 +65,10 @@ const AdminStores: React.FC = () => {
     e.preventDefault();
 
     const logoUrl = formData.logo || 'https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=100';
+    const deliveryLocationsArray = formData.deliveryLocations
+      .split(',')
+      .map(loc => loc.trim())
+      .filter(loc => loc.length > 0);
 
     if (editingStore) {
       updateStore(editingStore.id, {
@@ -71,6 +80,7 @@ const AdminStores: React.FC = () => {
         phone: formData.phone,
         email: formData.email,
         logo: logoUrl,
+        deliveryLocations: deliveryLocationsArray,
       });
       toast.success('Store updated successfully');
     } else {
@@ -85,12 +95,42 @@ const AdminStores: React.FC = () => {
         description: formData.description,
         phone: formData.phone,
         email: formData.email,
+        deliveryLocations: deliveryLocationsArray,
       });
+      
+      // Send notification for new store
+      addNotification({
+        title: 'New Store Added',
+        message: `${formData.name} has been added to the platform`,
+        type: 'store',
+        targetRole: 'all',
+      });
+      
       toast.success('Store registered successfully');
     }
 
     setIsDialogOpen(false);
     resetForm();
+  };
+
+  const handleApproveStore = (id: string, storeName: string) => {
+    approveStore(id);
+    addNotification({
+      title: 'Store Approved!',
+      message: `${storeName} is now live and accepting orders`,
+      type: 'store',
+      targetRole: 'all',
+    });
+  };
+
+  const handleRejectStore = (id: string, storeName: string) => {
+    rejectStore(id);
+    addNotification({
+      title: 'Store Registration Rejected',
+      message: `${storeName} registration was not approved`,
+      type: 'store',
+      targetRole: 'store',
+    });
   };
 
   const pendingStores = getPendingStores();
@@ -155,7 +195,7 @@ const AdminStores: React.FC = () => {
                       variant="outline"
                       size="sm"
                       className="text-primary"
-                      onClick={() => approveStore(store.id)}
+                      onClick={() => handleApproveStore(store.id, store.name)}
                     >
                       <CheckCircle className="w-4 h-4 mr-1" />
                       Approve
@@ -164,7 +204,7 @@ const AdminStores: React.FC = () => {
                       variant="outline"
                       size="sm"
                       className="text-destructive"
-                      onClick={() => rejectStore(store.id)}
+                      onClick={() => handleRejectStore(store.id, store.name)}
                     >
                       <XCircle className="w-4 h-4 mr-1" />
                       Reject
@@ -289,14 +329,20 @@ const AdminStores: React.FC = () => {
                     placeholder="Brief description of the store..."
                   />
                 </div>
+                <ImageUpload
+                  label="Store Logo"
+                  value={formData.logo}
+                  onChange={(value) => setFormData({ ...formData, logo: value })}
+                  placeholder="Upload Logo"
+                />
                 <div>
-                  <Label>Store Logo URL</Label>
+                  <Label>Delivery Locations</Label>
                   <Input
-                    placeholder="https://example.com/logo.jpg"
-                    value={formData.logo}
-                    onChange={(e) => setFormData({ ...formData, logo: e.target.value })}
+                    placeholder="Location 1, Location 2, Location 3..."
+                    value={formData.deliveryLocations}
+                    onChange={(e) => setFormData({ ...formData, deliveryLocations: e.target.value })}
                   />
-                  <p className="text-xs text-muted-foreground mt-1">Leave empty for default image</p>
+                  <p className="text-xs text-muted-foreground mt-1">Comma-separated list of areas this store delivers to</p>
                 </div>
                 <div className="flex gap-3">
                   <Button type="submit" className="flex-1">

@@ -4,10 +4,11 @@ export interface Notification {
   id: string;
   title: string;
   message: string;
-  type: 'order' | 'offer' | 'system' | 'chat';
+  type: 'order' | 'offer' | 'system' | 'chat' | 'store' | 'product';
   read: boolean;
   createdAt: Date;
   link?: string;
+  targetRole?: 'admin' | 'store' | 'user' | 'all';
 }
 
 interface NotificationContextType {

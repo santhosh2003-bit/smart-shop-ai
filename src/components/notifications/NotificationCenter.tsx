@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell, Check, Trash2, ShoppingBag, Tag, MessageCircle, Info } from 'lucide-react';
+import { Bell, Check, Trash2, ShoppingBag, Tag, MessageCircle, Info, Store, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Popover,
@@ -20,6 +20,10 @@ const getNotificationIcon = (type: Notification['type']) => {
       return <Tag className="w-4 h-4 text-accent" />;
     case 'chat':
       return <MessageCircle className="w-4 h-4 text-blue-500" />;
+    case 'store':
+      return <Store className="w-4 h-4 text-green-500" />;
+    case 'product':
+      return <Package className="w-4 h-4 text-orange-500" />;
     default:
       return <Info className="w-4 h-4 text-muted-foreground" />;
   }

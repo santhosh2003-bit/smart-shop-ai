@@ -29,6 +29,7 @@ export interface Store {
   description?: string;
   phone?: string;
   email?: string;
+  deliveryLocations?: string[];
 }
 
 export interface CartItem {
@@ -61,4 +62,12 @@ export interface Category {
   name: string;
   icon: string;
   productCount: number;
+}
+
+export interface DeliveryLocation {
+  id: string;
+  name: string;
+  area: string;
+  pincode: string;
+  isActive: boolean;
 }
