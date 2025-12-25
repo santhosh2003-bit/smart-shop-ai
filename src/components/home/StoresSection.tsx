@@ -3,9 +3,10 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import StoreCard from '@/components/stores/StoreCard';
-import { stores } from '@/data/mockData';
+import { useStore } from '@/context/StoreContext';
 
 const StoresSection: React.FC = () => {
+  const { stores } = useStore();
   return (
     <section className="py-12 bg-secondary/30">
       <div className="container mx-auto">

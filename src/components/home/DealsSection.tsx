@@ -3,9 +3,10 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, Timer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ProductCard from '@/components/products/ProductCard';
-import { products } from '@/data/mockData';
+import { useStore } from '@/context/StoreContext';
 
 const DealsSection: React.FC = () => {
+  const { products } = useStore();
   const dealProducts = products.filter(p => p.discount);
 
   return (

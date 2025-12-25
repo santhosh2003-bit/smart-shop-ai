@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Package,
   Store,
@@ -8,50 +8,69 @@ import {
   TrendingDown,
   ShoppingCart,
   Eye,
+  Loader2
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AdminLayout from '@/components/admin/AdminLayout';
-import { products, stores } from '@/data/mockData';
-
-const stats = [
-  {
-    title: 'Total Products',
-    value: products.length.toString(),
-    change: '+12%',
-    trend: 'up',
-    icon: Package,
-  },
-  {
-    title: 'Active Stores',
-    value: stores.length.toString(),
-    change: '+3%',
-    trend: 'up',
-    icon: Store,
-  },
-  {
-    title: 'Total Users',
-    value: '1,234',
-    change: '+8%',
-    trend: 'up',
-    icon: Users,
-  },
-  {
-    title: 'Revenue',
-    value: '$12,345',
-    change: '-2%',
-    trend: 'down',
-    icon: DollarSign,
-  },
-];
-
-const recentOrders = [
-  { id: 'ORD-001', customer: 'John Doe', amount: 45.99, status: 'delivered' },
-  { id: 'ORD-002', customer: 'Jane Smith', amount: 32.50, status: 'pending' },
-  { id: 'ORD-003', customer: 'Mike Johnson', amount: 78.00, status: 'processing' },
-  { id: 'ORD-004', customer: 'Sarah Williams', amount: 25.99, status: 'delivered' },
-];
+import { toast } from 'sonner';
 
 const AdminDashboard: React.FC = () => {
+  const [stats, setStats] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await fetch('/api/admin/stats');
+        if (!res.ok) throw new Error('Failed to fetch');
+        const data = await res.json();
+        setStats(data);
+      } catch (err) {
+        toast.error('Failed to load dashboard stats');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchStats();
+  }, []);
+
+  if (isLoading || !stats) {
+    return (
+      <AdminLayout>
+        <div className="flex justify-center items-center h-64">
+          <Loader2 className="animate-spin w-8 h-8 text-primary" />
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  const statCards = [
+    {
+      title: 'Total Products',
+      value: stats.totalProducts.toString(),
+      trend: 'up',
+      icon: Package,
+    },
+    {
+      title: 'Active Stores',
+      value: stats.activeStores.toString(),
+      trend: 'up',
+      icon: Store,
+    },
+    {
+      title: 'Total Users',
+      value: stats.totalUsers.toString(),
+      trend: 'up',
+      icon: Users,
+    },
+    {
+      title: 'Revenue',
+      value: `$${Number(stats.revenue).toFixed(2)}`,
+      trend: 'up',
+      icon: DollarSign,
+    },
+  ];
+
   return (
     <AdminLayout>
       <div className="space-y-8">
@@ -62,24 +81,12 @@ const AdminDashboard: React.FC = () => {
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {stats.map((stat) => (
+          {statCards.map((stat) => (
             <Card key={stat.title} className="card-elevated">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
                     <stat.icon className="w-6 h-6 text-primary" />
-                  </div>
-                  <div
-                    className={`flex items-center gap-1 text-sm ${
-                      stat.trend === 'up' ? 'text-primary' : 'text-destructive'
-                    }`}
-                  >
-                    {stat.trend === 'up' ? (
-                      <TrendingUp className="w-4 h-4" />
-                    ) : (
-                      <TrendingDown className="w-4 h-4" />
-                    )}
-                    {stat.change}
                   </div>
                 </div>
                 <div className="mt-4">
@@ -102,25 +109,22 @@ const AdminDashboard: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {recentOrders.map((order) => (
+                {stats.recentOrders && stats.recentOrders.map((order: any) => (
                   <div
                     key={order.id}
                     className="flex items-center justify-between p-4 bg-secondary/50 rounded-xl"
                   >
                     <div>
-                      <p className="font-medium">{order.id}</p>
-                      <p className="text-sm text-muted-foreground">{order.customer}</p>
+                      <p className="font-medium text-sm">Order #{order.id}</p>
+                      <p className="text-xs text-muted-foreground">{order.customer}</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold">${order.amount.toFixed(2)}</p>
+                      <p className="font-bold text-sm">${Number(order.amount).toFixed(2)}</p>
                       <span
-                        className={`text-xs px-2 py-1 rounded-full ${
-                          order.status === 'delivered'
+                        className={`text-xs px-2 py-1 rounded-full ${order.status === 'delivered'
                             ? 'bg-primary/10 text-primary'
-                            : order.status === 'pending'
-                            ? 'bg-yellow-500/10 text-yellow-600'
                             : 'bg-blue-500/10 text-blue-600'
-                        }`}
+                          }`}
                       >
                         {order.status}
                       </span>
@@ -143,27 +147,27 @@ const AdminDashboard: React.FC = () => {
                 <div>
                   <div className="flex justify-between mb-2">
                     <span className="text-muted-foreground">Active Deals</span>
-                    <span className="font-bold">{products.filter((p) => p.discount).length}</span>
+                    <span className="font-bold">{stats.activeDeals}</span>
                   </div>
                   <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
                     <div
                       className="h-full bg-accent rounded-full"
                       style={{
-                        width: `${(products.filter((p) => p.discount).length / products.length) * 100}%`,
+                        width: `${(stats.activeDeals / stats.totalProducts) * 100}%`,
                       }}
                     />
                   </div>
                 </div>
                 <div>
                   <div className="flex justify-between mb-2">
-                    <span className="text-muted-foreground">In Stock Products</span>
-                    <span className="font-bold">{products.filter((p) => p.inStock).length}</span>
+                    <span className="text-muted-foreground">In Stock</span>
+                    <span className="font-bold">{stats.inStock}</span>
                   </div>
                   <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
                     <div
                       className="h-full bg-primary rounded-full"
                       style={{
-                        width: `${(products.filter((p) => p.inStock).length / products.length) * 100}%`,
+                        width: `${(stats.inStock / stats.totalProducts) * 100}%`,
                       }}
                     />
                   </div>
@@ -171,15 +175,7 @@ const AdminDashboard: React.FC = () => {
                 <div>
                   <div className="flex justify-between mb-2">
                     <span className="text-muted-foreground">Open Stores</span>
-                    <span className="font-bold">{stores.filter((s) => s.isOpen).length}</span>
-                  </div>
-                  <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-primary rounded-full"
-                      style={{
-                        width: `${(stores.filter((s) => s.isOpen).length / stores.length) * 100}%`,
-                      }}
-                    />
+                    <span className="font-bold">{stats.openStores}</span>
                   </div>
                 </div>
               </div>

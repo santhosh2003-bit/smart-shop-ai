@@ -34,73 +34,105 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const stored = localStorage.getItem('dealfinder-user');
-    if (stored) {
-      try {
-        setUser(JSON.parse(stored));
-      } catch {
-        localStorage.removeItem('dealfinder-user');
-      }
+  const checkAuth = async () => {
+    const token = localStorage.getItem('dealfinder-token');
+    if (!token) {
+      setIsLoading(false);
+      return;
     }
-    setIsLoading(false);
+
+    try {
+      const res = await fetch('/api/auth/me', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const userData = await res.json();
+        setUser(userData);
+      } else {
+        localStorage.removeItem('dealfinder-token');
+        setUser(null);
+      }
+    } catch (error) {
+      console.error(error);
+      localStorage.removeItem('dealfinder-token');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    checkAuth();
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
-    await new Promise((r) => setTimeout(r, 500)); // Simulate API call
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
 
-    const foundUser = mockUsers.find((u) => u.email === email && u.password === password);
-    if (foundUser) {
-      const { password: _, ...userData } = foundUser;
-      setUser(userData);
-      localStorage.setItem('dealfinder-user', JSON.stringify(userData));
-      toast.success(`Welcome back, ${userData.name}!`);
-      setIsLoading(false);
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.message || 'Login failed');
+        setIsLoading(false);
+        return false;
+      }
+
+      localStorage.setItem('dealfinder-token', data.token);
+      setUser(data.user);
+      toast.success(`Welcome back, ${data.user.name}!`);
       return true;
+    } catch (error) {
+      toast.error('Network error');
+      return false;
+    } finally {
+      setIsLoading(false);
     }
-
-    toast.error('Invalid email or password');
-    setIsLoading(false);
-    return false;
   };
 
   const register = async (email: string, password: string, name: string): Promise<boolean> => {
     setIsLoading(true);
-    await new Promise((r) => setTimeout(r, 500));
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, name }),
+      });
 
-    if (mockUsers.some((u) => u.email === email)) {
-      toast.error('Email already registered');
-      setIsLoading(false);
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.message || 'Registration failed');
+        setIsLoading(false);
+        return false;
+      }
+
+      localStorage.setItem('dealfinder-token', data.token);
+      setUser(data.user);
+      toast.success('Account created successfully!');
+      return true;
+    } catch (error) {
+      toast.error('Network error');
       return false;
+    } finally {
+      setIsLoading(false);
     }
-
-    const newUser: User = {
-      id: Date.now().toString(),
-      email,
-      name,
-      role: 'user',
-    };
-
-    mockUsers.push({ ...newUser, password });
-    setUser(newUser);
-    localStorage.setItem('dealfinder-user', JSON.stringify(newUser));
-    toast.success('Account created successfully!');
-    setIsLoading(false);
-    return true;
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('dealfinder-user');
+    localStorage.removeItem('dealfinder-token');
     toast.info('Logged out successfully');
   };
 
-  const updateProfile = (data: Partial<User>) => {
+  const updateProfile = async (data: Partial<User>) => {
+    // Note: Update profile endpoint not implemented yet in backend, just local update for now
     if (user) {
       const updated = { ...user, ...data };
       setUser(updated);
-      localStorage.setItem('dealfinder-user', JSON.stringify(updated));
       toast.success('Profile updated');
     }
   };

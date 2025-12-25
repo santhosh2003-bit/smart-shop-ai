@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Search, Edit2, Trash2, Upload, X, Image, Package } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Upload, X, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,12 +29,12 @@ import {
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import StoreLayout from '@/components/store/StoreLayout';
 import { useAuth } from '@/context/AuthContext';
 import { useStore } from '@/context/StoreContext';
 import { Product } from '@/types';
 import { toast } from 'sonner';
+import PosterUploader from '@/components/store/PosterUploader';
 
 const StoreProducts: React.FC = () => {
   const { user } = useAuth();
@@ -107,6 +107,25 @@ const StoreProducts: React.FC = () => {
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleProductsExtracted = (extractedProducts: any[]) => {
+    if (!approvedStore) return;
+    extractedProducts.forEach(p => {
+      addProduct({
+        name: p.name,
+        description: p.description || 'Imported from poster',
+        price: p.price,
+        originalPrice: undefined,
+        discount: undefined,
+        image: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=400',
+        category: 'Offers',
+        store: approvedStore,
+        inStock: true,
+        offer: '🔥 Special Offer',
+      });
+    });
+    toast.success(`Imported ${extractedProducts.length} products to inventory`);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -205,7 +224,9 @@ const StoreProducts: React.FC = () => {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <Image className="w-8 h-8 text-muted-foreground" />
+                        <div className="flex items-center justify-center w-full h-full text-muted-foreground">
+                          <Package className="w-8 h-8" />
+                        </div>
                       )}
                     </div>
                     <div className="flex-1">
@@ -343,6 +364,8 @@ const StoreProducts: React.FC = () => {
           </Dialog>
         </div>
 
+        <PosterUploader storeId={approvedStore.id} onProductsExtracted={handleProductsExtracted} />
+
         {/* Search */}
         <Card>
           <CardContent className="p-4">
@@ -405,10 +428,10 @@ const StoreProducts: React.FC = () => {
                         <TableCell>{product.category}</TableCell>
                         <TableCell>
                           <div>
-                            <p className="font-medium">${product.price.toFixed(2)}</p>
+                            <p className="font-medium">${product.price}</p>
                             {product.originalPrice && (
                               <p className="text-xs text-muted-foreground line-through">
-                                ${product.originalPrice.toFixed(2)}
+                                ${product.originalPrice}
                               </p>
                             )}
                           </div>

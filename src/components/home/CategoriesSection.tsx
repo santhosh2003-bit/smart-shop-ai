@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import CategoryCard from '@/components/products/CategoryCard';
 import ProductCard from '@/components/products/ProductCard';
-import { categories, products } from '@/data/mockData';
+import { useStore } from '@/context/StoreContext';
 
 const CategoriesSection: React.FC = () => {
+  const { categories, products } = useStore();
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
   const filteredProducts = activeCategory
@@ -23,11 +24,10 @@ const CategoriesSection: React.FC = () => {
         <div className="flex gap-4 overflow-x-auto pb-4 mb-8 scrollbar-hide -mx-4 px-4">
           <button
             onClick={() => setActiveCategory(null)}
-            className={`flex flex-col items-center gap-2 p-4 rounded-2xl transition-all min-w-[100px] shrink-0 ${
-              !activeCategory
+            className={`flex flex-col items-center gap-2 p-4 rounded-2xl transition-all min-w-[100px] shrink-0 ${!activeCategory
                 ? 'bg-primary text-primary-foreground shadow-lg scale-105'
                 : 'bg-card hover:bg-secondary card-elevated'
-            }`}
+              }`}
           >
             <span className="text-3xl">🛒</span>
             <span className="text-xs font-medium">All Items</span>

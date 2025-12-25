@@ -3,9 +3,10 @@ import { Helmet } from 'react-helmet-async';
 import { MapPin, Clock } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import StoreCard from '@/components/stores/StoreCard';
-import { stores } from '@/data/mockData';
+import { useStore } from '@/context/StoreContext';
 
 const Stores: React.FC = () => {
+  const { stores } = useStore();
   return (
     <Layout>
       <Helmet>
@@ -29,11 +30,10 @@ const Stores: React.FC = () => {
           {['All Stores', 'Open Now', 'Fast Delivery', 'Top Rated', 'New'].map((filter, i) => (
             <button
               key={i}
-              className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
-                i === 0
+              className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${i === 0
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-card hover:bg-secondary card-elevated'
-              }`}
+                }`}
             >
               {filter}
             </button>

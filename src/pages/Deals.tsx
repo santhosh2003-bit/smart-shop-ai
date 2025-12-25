@@ -3,9 +3,10 @@ import { Helmet } from 'react-helmet-async';
 import { Timer, Zap, Gift, Percent } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import ProductCard from '@/components/products/ProductCard';
-import { products } from '@/data/mockData';
+import { useStore } from '@/context/StoreContext';
 
 const Deals: React.FC = () => {
+  const { products } = useStore();
   const dealProducts = products.filter(p => p.discount);
 
   return (

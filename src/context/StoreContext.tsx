@@ -1,12 +1,21 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Store, Product } from '@/types';
-import { stores as initialStores, products as initialProducts, categories } from '@/data/mockData';
+import { Store, Product, Category } from '@/types';
 import { toast } from 'sonner';
+
+// Static categories for now, could be dynamic later
+const initialCategories: Category[] = [
+  { id: '1', name: 'Fruits & Veg', icon: '🍎', productCount: 120 },
+  { id: '2', name: 'Dairy & Bread', icon: '🥛', productCount: 85 },
+  { id: '3', name: 'Snacks', icon: '🍪', productCount: 65 },
+  { id: '4', name: 'Beverages', icon: '🥤', productCount: 45 },
+  { id: '5', name: 'Personal Care', icon: '🧴', productCount: 90 },
+  { id: '6', name: 'Household', icon: '🧹', productCount: 55 },
+];
 
 interface StoreContextType {
   stores: Store[];
   products: Product[];
-  categories: typeof categories;
+  categories: Category[];
   addStore: (store: Omit<Store, 'id' | 'rating' | 'reviewCount'>) => Store;
   updateStore: (id: string, data: Partial<Store>) => void;
   deleteStore: (id: string) => void;
@@ -25,66 +34,82 @@ interface StoreContextType {
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [stores, setStores] = useState<Store[]>(() => {
-    const stored = localStorage.getItem('dealfinder-stores');
-    if (stored) {
-      try {
-        return JSON.parse(stored);
-      } catch {
-        return initialStores.map(s => ({ ...s, status: 'approved' as const }));
-      }
-    }
-    return initialStores.map(s => ({ ...s, status: 'approved' as const }));
-  });
+  const [stores, setStores] = useState<Store[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
 
-  const [products, setProducts] = useState<Product[]>(() => {
-    const stored = localStorage.getItem('dealfinder-products');
-    if (stored) {
-      try {
-        return JSON.parse(stored);
-      } catch {
-        return initialProducts;
+  const fetchData = async () => {
+    try {
+      const [storesRes, productsRes] = await Promise.all([
+        fetch('/api/stores'),
+        fetch('/api/products')
+      ]);
+
+      if (storesRes.ok) {
+        setStores(await storesRes.json());
       }
+      if (productsRes.ok) {
+        setProducts(await productsRes.json());
+      }
+    } catch (error) {
+      console.error('Failed to fetch data', error);
+      toast.error('Failed to load data');
     }
-    return initialProducts;
-  });
+  };
 
   useEffect(() => {
-    localStorage.setItem('dealfinder-stores', JSON.stringify(stores));
-  }, [stores]);
+    fetchData();
+  }, []);
 
-  useEffect(() => {
-    localStorage.setItem('dealfinder-products', JSON.stringify(products));
-  }, [products]);
-
-  const addStore = (storeData: Omit<Store, 'id' | 'rating' | 'reviewCount'>): Store => {
-    const newStore: Store = {
-      ...storeData,
-      id: Date.now().toString(),
-      rating: 0,
-      reviewCount: 0,
-    };
-    setStores(prev => [newStore, ...prev]);
-    return newStore;
+  const addStore = async (storeData: Omit<Store, 'id' | 'rating' | 'reviewCount'>): Promise<Store> => {
+    try {
+      const res = await fetch('/api/stores', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(storeData),
+      });
+      const newStore = await res.json();
+      setStores(prev => [newStore, ...prev]);
+      return newStore;
+    } catch (error) {
+      toast.error('Failed to create store');
+      throw error;
+    }
   };
 
-  const updateStore = (id: string, data: Partial<Store>) => {
-    setStores(prev => prev.map(s => s.id === id ? { ...s, ...data } : s));
+  const updateStore = async (id: string, data: Partial<Store>) => {
+    try {
+      const res = await fetch(`/api/stores/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setStores(prev => prev.map(s => s.id === id ? updated : s));
+      }
+    } catch (error) {
+      toast.error('Failed to update store');
+    }
   };
 
-  const deleteStore = (id: string) => {
-    setStores(prev => prev.filter(s => s.id !== id));
-    setProducts(prev => prev.filter(p => p.store.id !== id));
-    toast.success('Store deleted successfully');
+  const deleteStore = async (id: string) => {
+    try {
+      await fetch(`/api/stores/${id}`, { method: 'DELETE' });
+      setStores(prev => prev.filter(s => s.id !== id));
+      setProducts(prev => prev.filter(p => p.store.id !== id));
+      toast.success('Store deleted successfully');
+    } catch (error) {
+      toast.error('Failed to delete store');
+    }
   };
 
-  const approveStore = (id: string) => {
-    setStores(prev => prev.map(s => s.id === id ? { ...s, status: 'approved' } : s));
+  const approveStore = async (id: string) => {
+    updateStore(id, { status: 'approved' });
     toast.success('Store approved successfully');
   };
 
-  const rejectStore = (id: string) => {
-    setStores(prev => prev.map(s => s.id === id ? { ...s, status: 'rejected' } : s));
+  const rejectStore = async (id: string) => {
+    updateStore(id, { status: 'rejected' });
     toast.info('Store rejected');
   };
 
@@ -100,25 +125,46 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return stores.filter(s => s.status === 'pending');
   };
 
-  const addProduct = (productData: Omit<Product, 'id' | 'rating' | 'reviewCount'>) => {
-    const newProduct: Product = {
-      ...productData,
-      id: Date.now().toString(),
-      rating: 0,
-      reviewCount: 0,
-    };
-    setProducts(prev => [newProduct, ...prev]);
-    toast.success('Product added successfully');
+  const addProduct = async (productData: Omit<Product, 'id' | 'rating' | 'reviewCount'>) => {
+    try {
+      const res = await fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(productData),
+      });
+      const newProduct = await res.json();
+      setProducts(prev => [newProduct, ...prev]);
+      toast.success('Product added successfully');
+    } catch (error) {
+      toast.error('Failed to add product');
+    }
   };
 
-  const updateProduct = (id: string, data: Partial<Product>) => {
-    setProducts(prev => prev.map(p => p.id === id ? { ...p, ...data } : p));
-    toast.success('Product updated successfully');
+  const updateProduct = async (id: string, data: Partial<Product>) => {
+    try {
+      const res = await fetch(`/api/products/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setProducts(prev => prev.map(p => p.id === id ? updated : p));
+        toast.success('Product updated successfully');
+      }
+    } catch (error) {
+      toast.error('Failed to update product');
+    }
   };
 
-  const deleteProduct = (id: string) => {
-    setProducts(prev => prev.filter(p => p.id !== id));
-    toast.success('Product deleted successfully');
+  const deleteProduct = async (id: string) => {
+    try {
+      await fetch(`/api/products/${id}`, { method: 'DELETE' });
+      setProducts(prev => prev.filter(p => p.id !== id));
+      toast.success('Product deleted successfully');
+    } catch (error) {
+      toast.error('Failed to delete product');
+    }
   };
 
   const getProductsByStore = (storeId: string) => {
@@ -135,8 +181,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       value={{
         stores,
         products,
-        categories,
-        addStore,
+        categories: initialCategories,
+        addStore: addStore as any,
         updateStore,
         deleteStore,
         approveStore,

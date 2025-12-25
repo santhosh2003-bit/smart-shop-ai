@@ -189,7 +189,7 @@ const StoreDashboard: React.FC = () => {
                         />
                         <div className="flex-1 min-w-0">
                           <p className="font-medium truncate">{product.name}</p>
-                          <p className="text-sm text-muted-foreground">${product.price.toFixed(2)}</p>
+                          <p className="text-sm text-muted-foreground">${product.price}</p>
                         </div>
                         <Badge variant={product.inStock ? 'default' : 'secondary'}>
                           {product.inStock ? 'In Stock' : 'Out'}

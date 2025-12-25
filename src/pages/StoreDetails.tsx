@@ -6,14 +6,16 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Layout from '@/components/layout/Layout';
 import ProductCard from '@/components/products/ProductCard';
-import { stores, products } from '@/data/mockData';
+import { useStore } from '@/context/StoreContext';
 
 const StoreDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const { stores, products } = useStore();
   const [isFavorite, setIsFavorite] = useState(false);
 
   const store = stores.find((s) => s.id === id);
-  const storeProducts = products.filter((p) => p.store.id === id);
+  // Ensure we compare strings properly, as API IDs might be numbers or strings
+  const storeProducts = products.filter((p) => String(p.store.id) === String(id));
 
   if (!store) {
     return (
@@ -35,7 +37,7 @@ const StoreDetails: React.FC = () => {
         <div className="relative h-64 md:h-80 bg-gradient-to-br from-primary/20 to-accent/20">
           <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=1200')] bg-cover bg-center opacity-20" />
           <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
-          
+
           {/* Breadcrumb */}
           <div className="container mx-auto pt-6 relative z-10">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -57,7 +59,7 @@ const StoreDetails: React.FC = () => {
                 alt={store.name}
                 className="w-24 h-24 md:w-32 md:h-32 rounded-2xl object-cover border-4 border-background shadow-lg"
               />
-              
+
               <div className="flex-1">
                 <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                   <div>
@@ -69,7 +71,7 @@ const StoreDetails: React.FC = () => {
                         <Badge variant="secondary">Closed</Badge>
                       )}
                     </div>
-                    
+
                     <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                       <div className="flex items-center gap-1">
                         <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
@@ -85,7 +87,7 @@ const StoreDetails: React.FC = () => {
                         <span>{store.deliveryTime}</span>
                       </div>
                     </div>
-                    
+
                     <p className="mt-2 text-muted-foreground flex items-center gap-1">
                       <MapPin className="w-4 h-4 shrink-0" />
                       {store.address}

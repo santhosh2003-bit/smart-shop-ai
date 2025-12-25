@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, Bot, User, Minimize2 } from 'lucide-react';
+import { io } from 'socket.io-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -31,10 +32,14 @@ const botResponses = [
   "We offer free delivery on orders above $25!",
 ];
 
+const socket = io('http://localhost:5050', {
+  autoConnect: false
+});
+
 const LiveChat: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -44,33 +49,54 @@ const LiveChat: React.FC = () => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, isTyping]);
+
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      socket.connect();
+      socket.emit('join_user_room', user.id);
+
+      socket.on('new_message', (newMsg: any) => {
+        setMessages(prev => {
+          // Prevent duplicates
+          if (prev.some(m => m.id === newMsg.id)) return prev;
+          return [...prev, {
+            ...newMsg,
+            timestamp: new Date(newMsg.timestamp)
+          }];
+        });
+        setIsTyping(false);
+      });
+
+      // Fetch history
+      fetch(`/api/chat/history/${user.id}`)
+        .then(res => res.json())
+        .then(data => {
+          setMessages(data.map((m: any) => ({
+            ...m,
+            timestamp: new Date(m.timestamp)
+          })));
+        })
+        .catch(console.error);
+    }
+
+    return () => {
+      socket.off('new_message');
+      socket.disconnect();
+    };
+  }, [isAuthenticated, user]);
 
   const handleSend = () => {
-    if (!input.trim()) return;
+    if (!input.trim() || !user) return;
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
+    socket.emit('send_message', {
+      userId: user.id,
       text: input,
-      sender: 'user',
-      timestamp: new Date(),
-    };
+      sender: 'user'
+    });
 
-    setMessages((prev) => [...prev, userMessage]);
     setInput('');
-    setIsTyping(true);
-
-    // Simulate bot response
-    setTimeout(() => {
-      const botMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        text: botResponses[Math.floor(Math.random() * botResponses.length)],
-        sender: 'bot',
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, botMessage]);
-      setIsTyping(false);
-    }, 1000 + Math.random() * 1000);
+    // Optimistic update optional, but we'll wait for server echo for consistency
   };
 
   if (!isOpen) {
@@ -128,6 +154,11 @@ const LiveChat: React.FC = () => {
           {/* Messages */}
           <ScrollArea className="h-[340px] p-4" ref={scrollRef}>
             <div className="space-y-4">
+              {messages.length === 0 && (
+                <div className="text-center text-sm text-muted-foreground mt-4">
+                  Say Hello to start chatting!
+                </div>
+              )}
               {messages.map((message) => (
                 <div
                   key={message.id}
@@ -150,6 +181,9 @@ const LiveChat: React.FC = () => {
                     )}
                   >
                     <p className="text-sm">{message.text}</p>
+                    <p className="text-[10px] opacity-70 mt-1 text-right">
+                      {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </p>
                   </div>
                   {message.sender === 'user' && (
                     <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center shrink-0">

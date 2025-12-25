@@ -24,6 +24,7 @@ const paymentMethods = [
 
 const Checkout: React.FC = () => {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card');
+  const [address, setAddress] = useState('');
   const [cardNumber, setCardNumber] = useState('');
   const [cardExpiry, setCardExpiry] = useState('');
   const [cardCvv, setCardCvv] = useState('');
@@ -47,15 +48,41 @@ const Checkout: React.FC = () => {
       return;
     }
 
-    setIsProcessing(true);
-    
-    // Simulate payment processing
-    await new Promise((r) => setTimeout(r, 2000));
+    if (!address.trim()) {
+      toast.error('Please enter delivery address');
+      return;
+    }
 
-    toast.success('Payment successful! Order placed.');
-    clearCart();
-    navigate('/tracking');
-    setIsProcessing(false);
+    setIsProcessing(true);
+
+    try {
+      const orderData = {
+        userId: user?.id,
+        items,
+        total: grandTotal,
+        deliveryAddress: address,
+        storeId: items[0]?.product.store.id // Assuming all items from same store or taking first
+      };
+
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderData),
+      });
+
+      if (res.ok) {
+        const { id } = await res.json();
+        toast.success('Payment successful! Order placed.');
+        clearCart();
+        navigate(`/tracking/${id}`);
+      } else {
+        toast.error('Failed to place order');
+      }
+    } catch (error) {
+      toast.error('Network error during checkout');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const formatCardNumber = (value: string) => {
@@ -96,6 +123,24 @@ const Checkout: React.FC = () => {
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Payment Methods */}
           <div className="lg:col-span-2 space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Delivery Address</CardTitle>
+                <CardDescription>Where should we send your order?</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <Label htmlFor="address">Address</Label>
+                  <Input
+                    id="address"
+                    placeholder="123 Main St, Apartment 4B"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader>
                 <CardTitle>Select Payment Method</CardTitle>
@@ -234,7 +279,7 @@ const Checkout: React.FC = () => {
                         <span className="text-2xl font-bold">$50.00</span>
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        {grandTotal > 50 
+                        {grandTotal > 50
                           ? 'Insufficient balance. Please add money or choose another method.'
                           : 'Sufficient balance for this order.'}
                       </p>

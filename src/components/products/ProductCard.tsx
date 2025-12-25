@@ -21,7 +21,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           alt={product.name}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
         />
-        
+
         {/* Offer badge */}
         {product.offer && (
           <span className="absolute top-3 left-3 px-2.5 py-1 rounded-lg deal-badge text-xs font-semibold text-accent-foreground">
@@ -69,10 +69,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         {/* Price and Add button */}
         <div className="flex items-center justify-between">
           <div className="flex items-baseline gap-2">
-            <span className="text-lg font-bold text-foreground">${product.price.toFixed(2)}</span>
+            <span className="text-lg font-bold text-foreground">${product?.price}</span>
             {product.originalPrice && (
               <span className="text-sm text-muted-foreground line-through">
-                ${product.originalPrice.toFixed(2)}
+                ${product.originalPrice}
               </span>
             )}
           </div>

@@ -29,12 +29,12 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import AdminLayout from '@/components/admin/AdminLayout';
-import { products as initialProducts, stores, categories } from '@/data/mockData';
+import { useStore } from '@/context/StoreContext';
 import { Product } from '@/types';
 import { toast } from 'sonner';
 
 const AdminProducts: React.FC = () => {
-  const [products, setProducts] = useState<Product[]>(initialProducts);
+  const { products, stores, categories, addProduct, updateProduct, deleteProduct } = useStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -118,29 +118,20 @@ const AdminProducts: React.FC = () => {
     const discount = originalPrice ? Math.round(((originalPrice - price) / originalPrice) * 100) : undefined;
 
     if (editingProduct) {
-      setProducts((prev) =>
-        prev.map((p) =>
-          p.id === editingProduct.id
-            ? {
-                ...p,
-                name: formData.name,
-                description: formData.description,
-                price,
-                originalPrice,
-                discount,
-                category: formData.category,
-                store,
-                offer: formData.offer || undefined,
-                inStock: formData.inStock,
-                image: imagePreview || p.image,
-              }
-            : p
-        )
-      );
-      toast.success('Product updated successfully');
+      updateProduct(editingProduct.id, {
+        name: formData.name,
+        description: formData.description,
+        price,
+        originalPrice,
+        discount,
+        category: formData.category,
+        store,
+        offer: formData.offer || undefined,
+        inStock: formData.inStock,
+        image: imagePreview || editingProduct.image,
+      });
     } else {
-      const newProduct: Product = {
-        id: Date.now().toString(),
+      addProduct({
         name: formData.name,
         description: formData.description,
         price,
@@ -150,12 +141,8 @@ const AdminProducts: React.FC = () => {
         category: formData.category,
         store,
         inStock: formData.inStock,
-        rating: 4.5,
-        reviewCount: 0,
         offer: formData.offer || undefined,
-      };
-      setProducts((prev) => [newProduct, ...prev]);
-      toast.success('Product added successfully');
+      });
     }
 
     setIsDialogOpen(false);
@@ -163,8 +150,7 @@ const AdminProducts: React.FC = () => {
   };
 
   const handleDelete = (id: string) => {
-    setProducts((prev) => prev.filter((p) => p.id !== id));
-    toast.success('Product deleted');
+    deleteProduct(id);
   };
 
   return (
@@ -402,15 +388,15 @@ const AdminProducts: React.FC = () => {
                       <TableCell>{product.category}</TableCell>
                       <TableCell>
                         <div>
-                          <p className="font-medium">${product.price.toFixed(2)}</p>
+                          <p className="font-medium">${product.price}</p>
                           {product.originalPrice && (
                             <p className="text-xs text-muted-foreground line-through">
-                              ${product.originalPrice.toFixed(2)}
+                              ${product.originalPrice}
                             </p>
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>{product.store.name}</TableCell>
+                      <TableCell>{product.store?.name}</TableCell>
                       <TableCell>
                         <Badge variant={product.inStock ? 'default' : 'secondary'}>
                           {product.inStock ? 'In Stock' : 'Out of Stock'}

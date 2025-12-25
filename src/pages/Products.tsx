@@ -6,9 +6,10 @@ import ProductCard from '@/components/products/ProductCard';
 import CategoryCard from '@/components/products/CategoryCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { products, categories } from '@/data/mockData';
+import { useStore } from '@/context/StoreContext';
 
 const Products: React.FC = () => {
+  const { products, categories } = useStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
@@ -21,7 +22,7 @@ const Products: React.FC = () => {
   const filteredProducts = products.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = !activeCategory || 
+    const matchesCategory = !activeCategory ||
       p.category === categories.find(c => c.id === activeCategory)?.name;
     const matchesDeals = !filters.onlyDeals || p.discount;
     const matchesStock = !filters.inStock || p.inStock;
@@ -114,11 +115,10 @@ const Products: React.FC = () => {
         <div className="flex gap-4 overflow-x-auto pb-4 mb-8 scrollbar-hide -mx-4 px-4">
           <button
             onClick={() => setActiveCategory(null)}
-            className={`flex flex-col items-center gap-2 p-4 rounded-2xl transition-all min-w-[100px] shrink-0 ${
-              !activeCategory
+            className={`flex flex-col items-center gap-2 p-4 rounded-2xl transition-all min-w-[100px] shrink-0 ${!activeCategory
                 ? 'bg-primary text-primary-foreground shadow-lg'
                 : 'bg-card hover:bg-secondary card-elevated'
-            }`}
+              }`}
           >
             <span className="text-2xl">🛒</span>
             <span className="text-xs font-medium">All</span>
