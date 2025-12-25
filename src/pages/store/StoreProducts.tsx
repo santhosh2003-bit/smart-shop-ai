@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Search, Edit2, Trash2, Upload, X, Package } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -32,13 +32,16 @@ import { Badge } from '@/components/ui/badge';
 import StoreLayout from '@/components/store/StoreLayout';
 import { useAuth } from '@/context/AuthContext';
 import { useStore } from '@/context/StoreContext';
+import { useNotifications } from '@/context/NotificationContext';
 import { Product } from '@/types';
 import { toast } from 'sonner';
 import PosterUploader from '@/components/store/PosterUploader';
+import ImageUpload from '@/components/ui/ImageUpload';
 
 const StoreProducts: React.FC = () => {
   const { user } = useAuth();
   const { categories, getStoresByOwner, getProductsByOwner, addProduct, updateProduct, deleteProduct } = useStore();
+  const { addNotification } = useNotifications();
 
   const userStores = user ? getStoresByOwner(user.id) : [];
   const approvedStore = userStores.find(s => s.status === 'approved');
@@ -98,15 +101,8 @@ const StoreProducts: React.FC = () => {
     setIsDialogOpen(true);
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
+  const handleImageChange = (value: string) => {
+    setImagePreview(value);
   };
 
   const handleProductsExtracted = (extractedProducts: any[]) => {
@@ -165,6 +161,15 @@ const StoreProducts: React.FC = () => {
         inStock: formData.inStock,
         offer: formData.offer || undefined,
       });
+      
+      // Send notification for new product
+      addNotification({
+        title: 'New Product Added!',
+        message: `${formData.name} is now available at ${approvedStore.name}`,
+        type: 'product',
+        targetRole: 'all',
+        link: '/products',
+      });
     }
 
     setIsDialogOpen(false);
@@ -213,51 +218,12 @@ const StoreProducts: React.FC = () => {
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Image Upload */}
-                <div className="space-y-2">
-                  <Label>Product Image</Label>
-                  <div className="flex items-center gap-4">
-                    <div className="w-24 h-24 rounded-xl border-2 border-dashed border-border flex items-center justify-center overflow-hidden bg-secondary/50">
-                      {imagePreview ? (
-                        <img
-                          src={imagePreview}
-                          alt="Preview"
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="flex items-center justify-center w-full h-full text-muted-foreground">
-                          <Package className="w-8 h-8" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <Input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        className="hidden"
-                        id="image-upload"
-                      />
-                      <Label
-                        htmlFor="image-upload"
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-secondary rounded-lg cursor-pointer hover:bg-secondary/80"
-                      >
-                        <Upload className="w-4 h-4" />
-                        Upload Image
-                      </Label>
-                      {imagePreview && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setImagePreview('')}
-                          className="ml-2"
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                <ImageUpload
+                  label="Product Image"
+                  value={imagePreview}
+                  onChange={handleImageChange}
+                  placeholder="Upload Image"
+                />
 
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="space-y-2">

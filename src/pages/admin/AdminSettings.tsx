@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Save, Bell, Shield, Palette, Globe, Mail, Database, CreditCard } from 'lucide-react';
+import { Save, Bell, Shield, Palette, Globe, MapPin, Plus, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,8 +8,12 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { toast } from 'sonner';
+import { DeliveryLocation } from '@/types';
 
 const AdminSettings: React.FC = () => {
   const [generalSettings, setGeneralSettings] = useState({
@@ -25,6 +29,8 @@ const AdminSettings: React.FC = () => {
     orderUpdates: true,
     promotionalEmails: false,
     weeklyReport: true,
+    newStoreAlerts: true,
+    newProductAlerts: true,
   });
 
   const [securitySettings, setSecuritySettings] = useState({
@@ -32,6 +38,16 @@ const AdminSettings: React.FC = () => {
     sessionTimeout: '30',
     loginAttempts: '5',
   });
+
+  const [deliveryLocations, setDeliveryLocations] = useState<DeliveryLocation[]>([
+    { id: '1', name: 'Downtown', area: 'Central Business District', pincode: '10001', isActive: true },
+    { id: '2', name: 'Midtown', area: 'Midtown Manhattan', pincode: '10018', isActive: true },
+    { id: '3', name: 'Uptown', area: 'Upper East Side', pincode: '10028', isActive: true },
+    { id: '4', name: 'Brooklyn Heights', area: 'Brooklyn', pincode: '11201', isActive: false },
+  ]);
+
+  const [isLocationDialogOpen, setIsLocationDialogOpen] = useState(false);
+  const [newLocation, setNewLocation] = useState({ name: '', area: '', pincode: '' });
 
   const handleSaveGeneral = () => {
     toast.success('General settings saved successfully');
@@ -43,6 +59,33 @@ const AdminSettings: React.FC = () => {
 
   const handleSaveSecurity = () => {
     toast.success('Security settings saved successfully');
+  };
+
+  const handleAddLocation = () => {
+    if (!newLocation.name || !newLocation.area || !newLocation.pincode) {
+      toast.error('Please fill all fields');
+      return;
+    }
+    const location: DeliveryLocation = {
+      id: Date.now().toString(),
+      ...newLocation,
+      isActive: true,
+    };
+    setDeliveryLocations([...deliveryLocations, location]);
+    setNewLocation({ name: '', area: '', pincode: '' });
+    setIsLocationDialogOpen(false);
+    toast.success('Delivery location added');
+  };
+
+  const handleToggleLocation = (id: string) => {
+    setDeliveryLocations(prev =>
+      prev.map(loc => loc.id === id ? { ...loc, isActive: !loc.isActive } : loc)
+    );
+  };
+
+  const handleDeleteLocation = (id: string) => {
+    setDeliveryLocations(prev => prev.filter(loc => loc.id !== id));
+    toast.success('Location removed');
   };
 
   return (
@@ -62,6 +105,10 @@ const AdminSettings: React.FC = () => {
             <TabsTrigger value="notifications" className="gap-2">
               <Bell className="w-4 h-4" />
               Notifications
+            </TabsTrigger>
+            <TabsTrigger value="delivery" className="gap-2">
+              <MapPin className="w-4 h-4" />
+              Delivery Locations
             </TabsTrigger>
             <TabsTrigger value="security" className="gap-2">
               <Shield className="w-4 h-4" />
@@ -197,6 +244,101 @@ const AdminSettings: React.FC = () => {
                   <Save className="w-4 h-4 mr-2" />
                   Save Changes
                 </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Delivery Locations */}
+          <TabsContent value="delivery" className="space-y-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Delivery Locations</CardTitle>
+                  <CardDescription>Manage areas where delivery is available</CardDescription>
+                </div>
+                <Dialog open={isLocationDialogOpen} onOpenChange={setIsLocationDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Location
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Add Delivery Location</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label>Location Name</Label>
+                        <Input
+                          value={newLocation.name}
+                          onChange={(e) => setNewLocation({ ...newLocation, name: e.target.value })}
+                          placeholder="e.g., Downtown"
+                        />
+                      </div>
+                      <div>
+                        <Label>Area</Label>
+                        <Input
+                          value={newLocation.area}
+                          onChange={(e) => setNewLocation({ ...newLocation, area: e.target.value })}
+                          placeholder="e.g., Central Business District"
+                        />
+                      </div>
+                      <div>
+                        <Label>Pincode</Label>
+                        <Input
+                          value={newLocation.pincode}
+                          onChange={(e) => setNewLocation({ ...newLocation, pincode: e.target.value })}
+                          placeholder="e.g., 10001"
+                        />
+                      </div>
+                      <Button onClick={handleAddLocation} className="w-full">Add Location</Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Area</TableHead>
+                      <TableHead>Pincode</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {deliveryLocations.map((location) => (
+                      <TableRow key={location.id}>
+                        <TableCell className="font-medium">{location.name}</TableCell>
+                        <TableCell>{location.area}</TableCell>
+                        <TableCell>{location.pincode}</TableCell>
+                        <TableCell>
+                          <Badge variant={location.isActive ? 'default' : 'secondary'}>
+                            {location.isActive ? 'Active' : 'Inactive'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Switch
+                              checked={location.isActive}
+                              onCheckedChange={() => handleToggleLocation(location.id)}
+                            />
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-destructive"
+                              onClick={() => handleDeleteLocation(location.id)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </CardContent>
             </Card>
           </TabsContent>
