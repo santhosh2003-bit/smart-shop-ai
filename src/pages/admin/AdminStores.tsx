@@ -18,6 +18,7 @@ import { Link } from 'react-router-dom';
 const AdminStores: React.FC = () => {
   const { stores, addStore, updateStore, deleteStore, approveStore, rejectStore, getPendingStores, getApprovedStores } = useStore();
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingStore, setEditingStore] = useState<Store | null>(null);
   const [formData, setFormData] = useState({
@@ -28,10 +29,11 @@ const AdminStores: React.FC = () => {
     description: '',
     phone: '',
     email: '',
+    logo: '',
   });
 
   const resetForm = () => {
-    setFormData({ name: '', address: '', deliveryTime: '', distance: '', description: '', phone: '', email: '' });
+    setFormData({ name: '', address: '', deliveryTime: '', distance: '', description: '', phone: '', email: '', logo: '' });
     setEditingStore(null);
   };
 
@@ -46,6 +48,7 @@ const AdminStores: React.FC = () => {
         description: store.description || '',
         phone: store.phone || '',
         email: store.email || '',
+        logo: store.logo || '',
       });
     } else {
       resetForm();
@@ -56,6 +59,8 @@ const AdminStores: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    const logoUrl = formData.logo || 'https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=100';
+
     if (editingStore) {
       updateStore(editingStore.id, {
         name: formData.name,
@@ -65,12 +70,13 @@ const AdminStores: React.FC = () => {
         description: formData.description,
         phone: formData.phone,
         email: formData.email,
+        logo: logoUrl,
       });
       toast.success('Store updated successfully');
     } else {
       addStore({
         name: formData.name,
-        logo: 'https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=100',
+        logo: logoUrl,
         distance: formData.distance,
         deliveryTime: formData.deliveryTime,
         address: formData.address,
@@ -282,6 +288,15 @@ const AdminStores: React.FC = () => {
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     placeholder="Brief description of the store..."
                   />
+                </div>
+                <div>
+                  <Label>Store Logo URL</Label>
+                  <Input
+                    placeholder="https://example.com/logo.jpg"
+                    value={formData.logo}
+                    onChange={(e) => setFormData({ ...formData, logo: e.target.value })}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Leave empty for default image</p>
                 </div>
                 <div className="flex gap-3">
                   <Button type="submit" className="flex-1">

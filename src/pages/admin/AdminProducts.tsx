@@ -36,9 +36,13 @@ import { toast } from 'sonner';
 const AdminProducts: React.FC = () => {
   const { products, stores, categories, addProduct, updateProduct, deleteProduct } = useStore();
   const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [storeFilter, setStoreFilter] = useState<string>('all');
+  const [stockFilter, setStockFilter] = useState<string>('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
+  const [imageUrl, setImageUrl] = useState<string>('');
 
   // Form state
   const [formData, setFormData] = useState({
@@ -53,9 +57,16 @@ const AdminProducts: React.FC = () => {
   });
 
   const filteredProducts = products.filter(
-    (p) =>
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.category.toLowerCase().includes(searchQuery.toLowerCase())
+    (p) => {
+      const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.category.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = categoryFilter === 'all' || p.category === categoryFilter;
+      const matchesStore = storeFilter === 'all' || p.store?.id === storeFilter;
+      const matchesStock = stockFilter === 'all' || 
+        (stockFilter === 'instock' && p.inStock) || 
+        (stockFilter === 'outofstock' && !p.inStock);
+      return matchesSearch && matchesCategory && matchesStore && matchesStock;
+    }
   );
 
   const resetForm = () => {
@@ -70,6 +81,7 @@ const AdminProducts: React.FC = () => {
       inStock: true,
     });
     setImagePreview('');
+    setImageUrl('');
     setEditingProduct(null);
   };
 
@@ -87,6 +99,7 @@ const AdminProducts: React.FC = () => {
         inStock: product.inStock,
       });
       setImagePreview(product.image);
+      setImageUrl(product.image);
     } else {
       resetForm();
     }
@@ -117,6 +130,8 @@ const AdminProducts: React.FC = () => {
     const originalPrice = formData.originalPrice ? parseFloat(formData.originalPrice) : undefined;
     const discount = originalPrice ? Math.round(((originalPrice - price) / originalPrice) * 100) : undefined;
 
+    const finalImage = imagePreview || imageUrl || 'https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=400';
+
     if (editingProduct) {
       updateProduct(editingProduct.id, {
         name: formData.name,
@@ -128,7 +143,7 @@ const AdminProducts: React.FC = () => {
         store,
         offer: formData.offer || undefined,
         inStock: formData.inStock,
-        image: imagePreview || editingProduct.image,
+        image: finalImage,
       });
     } else {
       addProduct({
@@ -137,7 +152,7 @@ const AdminProducts: React.FC = () => {
         price,
         originalPrice,
         discount,
-        image: imagePreview || 'https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=400',
+        image: finalImage,
         category: formData.category,
         store,
         inStock: formData.inStock,
@@ -180,9 +195,9 @@ const AdminProducts: React.FC = () => {
                   <Label>Product Image</Label>
                   <div className="flex items-center gap-4">
                     <div className="w-24 h-24 rounded-xl border-2 border-dashed border-border flex items-center justify-center overflow-hidden bg-secondary/50">
-                      {imagePreview ? (
+                      {(imagePreview || imageUrl) ? (
                         <img
-                          src={imagePreview}
+                          src={imagePreview || imageUrl}
                           alt="Preview"
                           className="w-full h-full object-cover"
                         />
@@ -190,7 +205,7 @@ const AdminProducts: React.FC = () => {
                         <Image className="w-8 h-8 text-muted-foreground" />
                       )}
                     </div>
-                    <div className="flex-1">
+                    <div className="flex-1 space-y-2">
                       <Input
                         type="file"
                         accept="image/*"
@@ -205,17 +220,26 @@ const AdminProducts: React.FC = () => {
                         <Upload className="w-4 h-4" />
                         Upload Image
                       </Label>
-                      {imagePreview && (
+                      {(imagePreview || imageUrl) && (
                         <Button
                           type="button"
                           variant="ghost"
                           size="sm"
-                          onClick={() => setImagePreview('')}
+                          onClick={() => { setImagePreview(''); setImageUrl(''); }}
                           className="ml-2"
                         >
                           <X className="w-4 h-4" />
                         </Button>
                       )}
+                      <div className="mt-2">
+                        <Label className="text-sm text-muted-foreground">Or enter image URL</Label>
+                        <Input
+                          placeholder="https://example.com/image.jpg"
+                          value={imageUrl}
+                          onChange={(e) => { setImageUrl(e.target.value); setImagePreview(''); }}
+                          className="mt-1"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -334,17 +358,55 @@ const AdminProducts: React.FC = () => {
           </Dialog>
         </div>
 
-        {/* Search */}
+        {/* Search and Filters */}
         <Card>
           <CardContent className="p-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Search products..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search products..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="w-full md:w-40">
+                  <SelectValue placeholder="Category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.name}>
+                      {cat.icon} {cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={storeFilter} onValueChange={setStoreFilter}>
+                <SelectTrigger className="w-full md:w-40">
+                  <SelectValue placeholder="Store" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Stores</SelectItem>
+                  {stores.map((store) => (
+                    <SelectItem key={store.id} value={store.id}>
+                      {store.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={stockFilter} onValueChange={setStockFilter}>
+                <SelectTrigger className="w-full md:w-36">
+                  <SelectValue placeholder="Stock" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="instock">In Stock</SelectItem>
+                  <SelectItem value="outofstock">Out of Stock</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
