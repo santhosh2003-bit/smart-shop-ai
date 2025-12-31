@@ -1,24 +1,24 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Search, SlidersHorizontal, Timer, X } from 'lucide-react';
+import { ArrowRight, MapPin, Filter, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ProductCard from '@/components/products/ProductCard';
+import CategoryCard from '@/components/products/CategoryCard';
 import { useStore } from '@/context/StoreContext';
 import { toast } from 'sonner';
-import { Input } from '../ui/input';
+
 const DealsSection: React.FC = () => {
   const { products, categories } = useStore();
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
     onlyDeals: false,
     inStock: true,
     minRating: 0,
   });
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const [showFilters, setShowFilters] = useState(false)
+
   useEffect(() => {
-    // AI Feature: Detect Location for smart sorting
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -26,18 +26,17 @@ const DealsSection: React.FC = () => {
             lat: position.coords.latitude,
             lng: position.coords.longitude
           });
-          toast.info('Location detected! Showing nearest deals first.');
+          toast.success('Location detected! Showing nearest deals first.');
         },
-        (error) => {
+        () => {
           console.log('Location access denied, using default sort');
         }
       );
     }
   }, []);
 
-
   const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-    const R = 6371; // Radius of the earth in km
+    const R = 6371;
     const dLat = (lat2 - lat1) * (Math.PI / 180);
     const dLon = (lon2 - lon1) * (Math.PI / 180);
     const a =
@@ -45,210 +44,153 @@ const DealsSection: React.FC = () => {
       Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
       Math.sin(dLon / 2) * Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c; // Distance in km
+    return R * c;
   };
 
-  const dealProducts = products
+  const filteredProducts = products
     .map(p => {
-      // Enrich product with calculated distance if location available
       if (userLocation) {
-
-        // Priority: Product location > Store location > Mock location
         let targetLat, targetLng;
-
         if (p.latitude && p.longitude) {
-          // Product has its own location
           targetLat = p.latitude;
           targetLng = p.longitude;
         } else if (p.store?.latitude && p.store?.longitude) {
-          // Use store location
           targetLat = p.store.latitude;
           targetLng = p.store.longitude;
-        } else if (p.store?.id) {
-          // Fallback to mock location for demo
-
-          targetLat = null;
-          targetLng = null;
         }
-
         if (targetLat && targetLng) {
           const distance = getDistance(userLocation.lat, userLocation.lng, targetLat, targetLng);
-
           return { ...p, distance };
         }
       }
-      return { ...p, distance: null }; // Far away default
+      return { ...p, distance: null };
     })
     .filter(p => {
-      const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.description.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = !activeCategory ||
         p.category === categories.find(c => c.id === activeCategory)?.name;
       const matchesDeals = !filters.onlyDeals || p.discount;
       const matchesStock = !filters.inStock || p.inStock;
       const matchesRating = p.rating >= filters.minRating;
-
-      return matchesSearch && matchesCategory && matchesDeals && matchesStock && matchesRating;
+      return matchesCategory && matchesDeals && matchesStock && matchesRating;
     })
     .sort((a, b) => {
       if (a.distance && b.distance) {
         const distDiff = a.distance - b.distance;
-        if (Math.abs(distDiff) > 1) {
-          return distDiff;
-        }
+        if (Math.abs(distDiff) > 1) return distDiff;
       }
-
-      // If reasonably same distance, cheaper one wins
       return a.price - b.price;
     });
-  const [timeLeft, setTimeLeft] = React.useState({ hours: 0, mins: 0, secs: 0 });
-  const [targetTime, setTargetTime] = React.useState<Date | null>(null);
-
-  React.useEffect(() => {
-    // Fetch timer from backend
-    fetch('/api/deals/timer')
-      .then(res => res.json())
-      .then(data => {
-        setTargetTime(new Date(data.endTime));
-      })
-      .catch(err => console.error("Failed to fetch timer:", err));
-  }, []);
-
-  React.useEffect(() => {
-    if (!targetTime) return;
-
-    const interval = setInterval(() => {
-      const now = new Date();
-      const difference = targetTime.getTime() - now.getTime();
-
-      if (difference <= 0) {
-        // Reset or stop? For now hold at 0
-        setTimeLeft({ hours: 0, mins: 0, secs: 0 });
-        // Optionally refetch or reset logic (e.g. backend could auto-reset)
-      } else {
-        const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
-        const mins = Math.floor((difference / 1000 / 60) % 60);
-        const secs = Math.floor((difference / 1000) % 60);
-        setTimeLeft({ hours, mins, secs });
-      }
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [targetTime]);
 
   return (
-    <section className="py-12">
-      <div className="container mx-auto">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-8 h-8 rounded-lg deal-badge flex items-center justify-center">
-                <Timer className="w-4 h-4 text-accent-foreground" />
-              </div>
-              <span className="text-sm font-medium text-accent">Limited Time</span>
-            </div>
-            <h2 className="text-2xl md:text-3xl font-bold">Today's Best Deals</h2>
-            <p className="text-muted-foreground mt-1">Grab these amazing offers before they're gone!</p>
+    <section className="py-8">
+      <div className="container mx-auto px-4">
+        {/* Location indicator */}
+        {userLocation && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
+            <MapPin className="w-4 h-4 text-primary" />
+            <span>Showing products near your location</span>
           </div>
-          <Link to="/deals">
-            <Button variant="outline" className="gap-2">
-              View All Deals
-              <ArrowRight className="w-4 h-4" />
-            </Button>
-          </Link>
-        </div>
+        )}
 
-        {/* Countdown timer banner */}
-        <div className="deal-badge rounded-2xl p-4 md:p-6 mb-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-accent-foreground">
-            <div>
-              <h3 className="text-xl font-bold">Flash Sale Ends In</h3>
-              <p className="text-accent-foreground/80 text-sm">Don't miss out on these exclusive discounts!</p>
-            </div>
-            <div className="flex gap-3">
-              {[
-                { value: timeLeft.hours.toString().padStart(2, '0'), label: 'Hours' },
-                { value: timeLeft.mins.toString().padStart(2, '0'), label: 'Mins' },
-                { value: timeLeft.secs.toString().padStart(2, '0'), label: 'Secs' },
-              ].map((item, i) => (
-                <div key={i} className="bg-background/20 rounded-xl p-3 text-center min-w-[60px]">
-                  <span className="text-2xl font-bold block">{item.value}</span>
-                  <span className="text-xs opacity-80">{item.label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-        <div className="flex flex-col md:flex-row gap-4 mb-8">
-          <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Search products..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-12 h-12 rounded-xl"
-            />
-          </div>
+        {/* Category pills */}
+        <div className="flex items-center gap-3 overflow-x-auto pb-4 mb-6 scrollbar-hide">
+          <button
+            onClick={() => setActiveCategory(null)}
+            className={`shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+              !activeCategory
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+            }`}
+          >
+            All
+          </button>
+          {categories.slice(0, 6).map((category) => (
+            <button
+              key={category.id}
+              onClick={() => setActiveCategory(category.id)}
+              className={`shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                activeCategory === category.id
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+              }`}
+            >
+              {category.icon} {category.name}
+            </button>
+          ))}
           <Button
-            variant={showFilters ? 'default' : 'outline'}
-            className="gap-2 h-12"
+            variant="ghost"
+            size="sm"
+            className="shrink-0"
             onClick={() => setShowFilters(!showFilters)}
           >
-            <SlidersHorizontal className="w-4 h-4" />
-            Filters
+            <Filter className="w-4 h-4 mr-1" />
+            Filter
           </Button>
         </div>
-        {/* Filter panel */}
+
+        {/* Filters panel */}
         {showFilters && (
-          <div className="bg-card rounded-2xl p-6 mb-8 animate-slide-up card-elevated">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold">Filters</h3>
-              <Button variant="ghost" size="sm" onClick={() => setShowFilters(false)}>
+          <div className="bg-card rounded-xl p-4 mb-6 border border-border animate-fade-in">
+            <div className="flex items-center justify-between mb-3">
+              <span className="font-medium text-sm">Filters</span>
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowFilters(false)}>
                 <X className="w-4 h-4" />
               </Button>
             </div>
             <div className="flex flex-wrap gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label className="flex items-center gap-2 cursor-pointer text-sm">
                 <input
                   type="checkbox"
                   checked={filters.onlyDeals}
                   onChange={(e) => setFilters({ ...filters, onlyDeals: e.target.checked })}
-                  className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                  className="w-4 h-4 rounded border-border text-primary"
                 />
-                <span className="text-sm">Only Deals</span>
+                Deals Only
               </label>
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label className="flex items-center gap-2 cursor-pointer text-sm">
                 <input
                   type="checkbox"
                   checked={filters.inStock}
                   onChange={(e) => setFilters({ ...filters, inStock: e.target.checked })}
-                  className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                  className="w-4 h-4 rounded border-border text-primary"
                 />
-                <span className="text-sm">In Stock</span>
+                In Stock
               </label>
-              <div className="flex items-center gap-2">
-                <span className="text-sm">Min Rating:</span>
-                <select
-                  value={filters.minRating}
-                  onChange={(e) => setFilters({ ...filters, minRating: Number(e.target.value) })}
-                  className="h-9 px-3 rounded-lg border border-border bg-background text-sm"
-                >
-                  <option value={0}>All</option>
-                  <option value={4}>4+ Stars</option>
-                  <option value={4.5}>4.5+ Stars</option>
-                </select>
-              </div>
+              <select
+                value={filters.minRating}
+                onChange={(e) => setFilters({ ...filters, minRating: Number(e.target.value) })}
+                className="h-8 px-3 rounded-lg border border-border bg-background text-sm"
+              >
+                <option value={0}>Any Rating</option>
+                <option value={4}>4+ Stars</option>
+                <option value={4.5}>4.5+ Stars</option>
+              </select>
             </div>
           </div>
         )}
+
+        {/* Section header */}
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold">Products Near You</h2>
+          <Link to="/products">
+            <Button variant="ghost" size="sm" className="gap-1 text-primary">
+              See All <ArrowRight className="w-4 h-4" />
+            </Button>
+          </Link>
+        </div>
+
         {/* Products grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-          {dealProducts.slice(0, 4).map((product) => (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {filteredProducts.slice(0, 8).map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
         </div>
+
+        {filteredProducts.length === 0 && (
+          <div className="text-center py-12 text-muted-foreground">
+            No products found matching your filters
+          </div>
+        )}
       </div>
     </section>
   );
