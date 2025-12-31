@@ -11,11 +11,13 @@ interface ImageUploadProps {
   className?: string;
   label?: string;
   placeholder?: string;
+  onFileSelect?: (file: File | null) => void;
 }
 
 const ImageUpload: React.FC<ImageUploadProps> = ({
   value,
   onChange,
+  onFileSelect,
   className,
   label = 'Image',
   placeholder = 'Upload an image',
@@ -26,6 +28,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (onFileSelect) onFileSelect(file);
       setIsLoading(true);
       const reader = new FileReader();
       reader.onloadend = () => {

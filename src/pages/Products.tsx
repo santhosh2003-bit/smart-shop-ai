@@ -1,35 +1,112 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Search, SlidersHorizontal, X } from 'lucide-react';
+import { Search, SlidersHorizontal, X, MapPin } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import ProductCard from '@/components/products/ProductCard';
 import CategoryCard from '@/components/products/CategoryCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useStore } from '@/context/StoreContext';
+import { toast } from 'sonner';
 
 const Products: React.FC = () => {
-  const { products, categories } = useStore();
+  const { products, categories, stores } = useStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+
   const [filters, setFilters] = useState({
     onlyDeals: false,
     inStock: true,
     minRating: 0,
   });
 
-  const filteredProducts = products.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = !activeCategory ||
-      p.category === categories.find(c => c.id === activeCategory)?.name;
-    const matchesDeals = !filters.onlyDeals || p.discount;
-    const matchesStock = !filters.inStock || p.inStock;
-    const matchesRating = p.rating >= filters.minRating;
+  useEffect(() => {
+    // AI Feature: Detect Location for smart sorting
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
+          toast.info('Location detected! Showing nearest deals first.');
+        },
+        (error) => {
+          console.log('Location access denied, using default sort');
+        }
+      );
+    }
+  }, []);
 
-    return matchesSearch && matchesCategory && matchesDeals && matchesStock && matchesRating;
-  });
+
+
+  const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371; // Radius of the earth in km
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c; // Distance in km
+  };
+
+  const filteredProducts = products
+    .map(p => {
+      // Enrich product with calculated distance if location available
+      if (userLocation) {
+
+        // Priority: Product location > Store location > Mock location
+        let targetLat, targetLng;
+
+        if (p.latitude && p.longitude) {
+          // Product has its own location
+          targetLat = p.latitude;
+          targetLng = p.longitude;
+        } else if (p.store?.latitude && p.store?.longitude) {
+          // Use store location
+          targetLat = p.store.latitude;
+          targetLng = p.store.longitude;
+        } else if (p.store?.id) {
+          // Fallback to mock location for demo
+
+          targetLat = null;
+          targetLng = null;
+        }
+
+        if (targetLat && targetLng) {
+          const distance = getDistance(userLocation.lat, userLocation.lng, targetLat, targetLng);
+
+          return { ...p, distance };
+        }
+      }
+      return { ...p, distance: null }; // Far away default
+    })
+    .filter(p => {
+      const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.description.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = !activeCategory ||
+        p.category === categories.find(c => c.id === activeCategory)?.name;
+      const matchesDeals = !filters.onlyDeals || p.discount;
+      const matchesStock = !filters.inStock || p.inStock;
+      const matchesRating = p.rating >= filters.minRating;
+
+      return matchesSearch && matchesCategory && matchesDeals && matchesStock && matchesRating;
+    })
+    .sort((a, b) => {
+      if (a.distance && b.distance) {
+        const distDiff = a.distance - b.distance;
+        if (Math.abs(distDiff) > 1) {
+          return distDiff;
+        }
+      }
+
+      // If reasonably same distance, cheaper one wins
+      return a.price - b.price;
+    });
 
   return (
     <Layout>
@@ -41,8 +118,17 @@ const Products: React.FC = () => {
       <div className="container mx-auto py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">All Products</h1>
-          <p className="text-muted-foreground">Discover {products.length}+ products with the best prices</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold mb-2">
+                All Products
+                {userLocation && <span className="ml-3 text-sm font-normal text-muted-foreground bg-secondary px-3 py-1 rounded-full animate-pulse">
+                  📍 Near You
+                </span>}
+              </h1>
+              <p className="text-muted-foreground">Discover {products.length}+ products with the best prices</p>
+            </div>
+          </div>
         </div>
 
         {/* Search and filters */}
@@ -116,8 +202,8 @@ const Products: React.FC = () => {
           <button
             onClick={() => setActiveCategory(null)}
             className={`flex flex-col items-center gap-2 p-4 rounded-2xl transition-all min-w-[100px] shrink-0 ${!activeCategory
-                ? 'bg-primary text-primary-foreground shadow-lg'
-                : 'bg-card hover:bg-secondary card-elevated'
+              ? 'bg-primary text-primary-foreground shadow-lg'
+              : 'bg-card hover:bg-secondary card-elevated'
               }`}
           >
             <span className="text-2xl">🛒</span>

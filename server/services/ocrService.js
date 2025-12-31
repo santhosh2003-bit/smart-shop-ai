@@ -1,48 +1,43 @@
-import Tesseract from 'tesseract.js';
-import fs from 'fs';
+import { execFile } from 'child_process';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-export const parsePoster = async (imagePath) => {
-    try {
-        console.log(`Processing image: ${imagePath}`);
-        const { data: { text } } = await Tesseract.recognize(imagePath, 'eng', {
-            logger: m => console.log(m)
-        });
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-        console.log('Extracted Text:', text);
+export const parsePoster = (imagePath) => {
+    return new Promise((resolve, reject) => {
+        const scriptPath = path.join(__dirname, '../scripts/process_poster.py');
+        console.log(`Executing Python OCR script: ${scriptPath} on ${imagePath}`);
 
-        // Heuristic parsing: Look for lines with prices
-        const lines = text.split('\n');
-        const products = [];
+        // Use the Python 3.10 executable where dependencies were installed
+        const pythonPath = 'C:\\Users\\santh\\AppData\\Local\\Programs\\Python\\Python310\\python.exe';
 
-        // Regex for price: $10.99, 10.99, $10, 10/-
-        const priceRegex = /(\$?\d+\.?\d{0,2})\/?-?/;
+        execFile(pythonPath, [scriptPath, imagePath], (error, stdout, stderr) => {
+            if (error) {
+                console.error('Python execution error:', error);
+                console.error('Stderr:', stderr); // Capture python errors
+                return reject(error);
+            }
 
-        lines.forEach((line) => {
-            const match = line.match(priceRegex);
-            if (match) {
-                // Assume the text before or after the price is the product name
-                // This is a naive heuristic but works for simple lists
-                const cleanLine = line.replace(match[0], '').trim();
-                const price = parseFloat(match[1].replace('$', ''));
+            try {
+                // Find the first valid JSON object in output (ignore EasyOCR init logs if any leak)
+                // We configured python to print JSON last.
+                // However, EasyOCR might print "CUDA not available" to stderr, which is fine.
+                // stdout should contain our JSON.
 
-                if (cleanLine.length > 3 && price > 0) {
-                    products.push({
-                        name: cleanLine, // Simple extraction
-                        price: price,
-                        description: 'Extracted from poster offer',
-                        category: 'Offers'
-                    });
+                console.log('Python Output (Raw):', stdout);
+                const result = JSON.parse(stdout.trim());
+
+                if (result.error) {
+                    return reject(new Error(result.error));
                 }
+
+                resolve(result);
+            } catch (parseError) {
+                console.error('Failed to parse Python output:', stdout);
+                reject(parseError);
             }
         });
-
-        // Cleanup file after processing
-        // fs.unlinkSync(imagePath); 
-        // Keep it for now to serve it
-
-        return products;
-    } catch (error) {
-        console.error('OCR Error:', error);
-        throw error;
-    }
+    });
 };

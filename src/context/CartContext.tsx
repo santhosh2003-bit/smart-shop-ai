@@ -15,7 +15,19 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [items, setItems] = useState<CartItem[]>([]);
+  const [items, setItems] = useState<CartItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('dealfinder-cart');
+      return saved ? JSON.parse(saved) : [];
+    } catch (error) {
+      return [];
+    }
+  });
+
+  // Persist to local storage
+  React.useEffect(() => {
+    localStorage.setItem('dealfinder-cart', JSON.stringify(items));
+  }, [items]);
 
   const addToCart = useCallback((product: Product) => {
     setItems((prev) => {

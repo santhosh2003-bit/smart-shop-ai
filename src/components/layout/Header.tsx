@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Search, ShoppingCart, MapPin, User, Menu, X, History, ChevronDown, LogOut, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,50 @@ const Header: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const itemCount = getItemCount();
+  const [placeName, setPlaceName] = useState({ place: '', city: '' });
+  const getPlaceName = async (lat: number, lng: number) => {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+    );
+
+    const data = await res.json();
+    return data.display_name; // Full place name
+  };
+  const getCityName = async (lat: number, lng: number) => {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+    );
+    const data = await res.json();
+
+    const address = data.address;
+    return (
+      address.city ||
+      address.town ||
+      address.village ||
+      address.suburb ||
+      "Unknown"
+    );
+  };
+
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+
+        const place = await getPlaceName(lat, lng);
+        const city = await getCityName(lat, lng);
+
+        setPlaceName({ place, city });
+      },
+      (err) => {
+        console.error("Location error:", err);
+      }
+    );
+  }, []);
+
 
   const navLinks = [
     { to: '/', label: 'Home' },
@@ -33,9 +77,30 @@ const Header: React.FC = () => {
           <div className="flex items-center gap-2 text-muted-foreground">
             <MapPin className="w-4 h-4 text-primary" />
             <span>Delivering to</span>
-            <button className="flex items-center gap-1 font-medium text-foreground hover:text-primary transition-colors">
-              Downtown, New York<ChevronDown className="w-3 h-3" />
-            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-1 font-medium text-foreground hover:text-primary transition-colors">
+                  {placeName.city || "Detecting..."}
+                  <ChevronDown className="w-3 h-3" />
+                </button>
+              </DropdownMenuTrigger>
+
+              <DropdownMenuContent
+                align="start"
+                side="bottom"
+                className="max-w-xs"
+              >
+                <div className="px-3 py-2 flex items-start gap-2 text-sm text-muted-foreground">
+                  <MapPin className="w-4 h-4 text-primary shrink-0" />
+                  <span className="leading-snug text-white">
+                    {placeName.place || "Fetching location..."}
+                  </span>
+                </div>
+              </DropdownMenuContent>
+
+            </DropdownMenu>
+
+
           </div>
           <div className="hidden md:flex items-center gap-4">
             <Link to="/history" className="flex items-center gap-1 hover:text-primary transition-colors"><History className="w-4 h-4" />Order History</Link>

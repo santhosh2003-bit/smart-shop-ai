@@ -1,5 +1,6 @@
 import express from 'express';
 import pool from '../config/db.js';
+import { createNotification } from '../utils/notificationHelper.js';
 
 const router = express.Router();
 
@@ -138,13 +139,33 @@ router.post('/', async (req, res) => {
     }
 });
 
+
+
 // Update Order Status
 router.put('/:id/status', async (req, res) => {
     try {
         const { status } = req.body;
-        await pool.query('UPDATE orders SET status = ? WHERE id = ?', [status, req.params.id]);
+        const { id } = req.params;
+
+        await pool.query('UPDATE orders SET status = ? WHERE id = ?', [status, id]);
+
+        // Notification Logic
+        const [order] = await pool.query('SELECT userId FROM orders WHERE id = ?', [id]);
+
+        if (order.length > 0) {
+            const message = `Your order #${id} is now ${status.replace(/_/g, ' ').toUpperCase()}`;
+            await createNotification(req, {
+                userId: order[0].userId,
+                type: 'order_update',
+                message,
+                relatedId: id,
+                relatedType: 'order'
+            });
+        }
+
         res.json({ message: 'Status updated' });
     } catch (error) {
+        console.error(error);
         res.status(500).json({ message: 'Server error' });
     }
 });

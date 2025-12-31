@@ -13,6 +13,8 @@ import { useAuth } from '@/context/AuthContext';
 import { useStore } from '@/context/StoreContext';
 import { toast } from 'sonner';
 
+import LocationPicker from '@/components/store/LocationPicker';
+
 const StoreSettings: React.FC = () => {
   const { user } = useAuth();
   const { getStoresByOwner, addStore, updateStore } = useStore();
@@ -21,7 +23,17 @@ const StoreSettings: React.FC = () => {
   const existingStore = userStores[0];
 
   const [logoPreview, setLogoPreview] = useState<string>('');
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    address: string;
+    deliveryTime: string;
+    distance: string;
+    description: string;
+    phone: string;
+    email: string;
+    isOpen: boolean;
+    location?: { lat: number; lng: number } | null;
+  }>({
     name: '',
     address: '',
     deliveryTime: '',
@@ -30,6 +42,7 @@ const StoreSettings: React.FC = () => {
     phone: '',
     email: '',
     isOpen: true,
+    location: null,
   });
 
   useEffect(() => {
@@ -43,14 +56,20 @@ const StoreSettings: React.FC = () => {
         phone: existingStore.phone || '',
         email: existingStore.email || '',
         isOpen: existingStore.isOpen,
+        location: existingStore.latitude && existingStore.longitude
+          ? { lat: existingStore.latitude, lng: existingStore.longitude }
+          : null,
       });
       setLogoPreview(existingStore.logo);
     }
   }, [existingStore]);
 
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setSelectedFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setLogoPreview(reader.result as string);
@@ -67,33 +86,37 @@ const StoreSettings: React.FC = () => {
       return;
     }
 
+    const submissionData = new FormData();
+    submissionData.append('name', formData.name);
+    submissionData.append('address', formData.address);
+    submissionData.append('deliveryTime', formData.deliveryTime);
+    submissionData.append('distance', formData.distance);
+    submissionData.append('description', formData.description);
+    submissionData.append('phone', formData.phone);
+    submissionData.append('email', formData.email);
+    submissionData.append('isOpen', formData.isOpen ? '1' : '0');
+
+    if (formData.location) {
+      submissionData.append('latitude', formData.location.lat.toString());
+      submissionData.append('longitude', formData.location.lng.toString());
+    }
+
+    // For file
+    if (selectedFile) {
+      submissionData.append('logo', selectedFile);
+    } else if (logoPreview && !logoPreview.startsWith('http')) {
+      // If it's a base64 string but no file object (rare if we track consistently), careful.
+      // Ideally we only send 'logo' if it's a file.
+      // If user didn't change logo, we don't need to append it.
+    }
+
     if (existingStore) {
-      updateStore(existingStore.id, {
-        name: formData.name,
-        address: formData.address,
-        deliveryTime: formData.deliveryTime,
-        distance: formData.distance,
-        description: formData.description,
-        phone: formData.phone,
-        email: formData.email,
-        isOpen: formData.isOpen,
-        logo: logoPreview || existingStore.logo,
-      });
+      updateStore(existingStore.id, submissionData);
       toast.success('Store updated successfully');
     } else {
-      addStore({
-        name: formData.name,
-        logo: logoPreview || 'https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=100',
-        distance: formData.distance,
-        deliveryTime: formData.deliveryTime,
-        address: formData.address,
-        isOpen: formData.isOpen,
-        status: 'pending',
-        ownerId: user.id,
-        description: formData.description,
-        phone: formData.phone,
-        email: formData.email,
-      });
+      submissionData.append('status', 'pending');
+      submissionData.append('ownerId', user.id);
+      addStore(submissionData);
       toast.success('Store registered! Awaiting admin approval.');
     }
   };
@@ -129,8 +152,8 @@ const StoreSettings: React.FC = () => {
             existingStore.status === 'approved'
               ? 'border-primary/50 bg-primary/10'
               : existingStore.status === 'pending'
-              ? 'border-yellow-500/50 bg-yellow-500/10'
-              : 'border-destructive/50 bg-destructive/10'
+                ? 'border-yellow-500/50 bg-yellow-500/10'
+                : 'border-destructive/50 bg-destructive/10'
           }>
             <Store className="w-4 h-4" />
             <AlertTitle className="flex items-center gap-2">
@@ -216,6 +239,15 @@ const StoreSettings: React.FC = () => {
                     required
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Store Location (for Map Sort)</Label>
+                <LocationPicker
+                  value={formData.location}
+                  onChange={(loc) => setFormData({ ...formData, location: loc })}
+                  label={formData.location ? "Update Location" : "Pick on Map"}
+                />
               </div>
 
               <div className="grid md:grid-cols-2 gap-4">

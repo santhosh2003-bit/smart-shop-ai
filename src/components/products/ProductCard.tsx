@@ -11,6 +11,15 @@ interface ProductCardProps {
 
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const { addToCart } = useCart();
+  const formatDistance = (distance?: number) => {
+    if (!Number.isFinite(distance)) return "N/A";
+
+    if (distance < 1) {
+      return `${(distance * 1000).toFixed(0)} m`;
+    }
+
+    return `${distance.toFixed(2)} km`;
+  };
 
   return (
     <div className="group bg-card rounded-2xl overflow-hidden card-elevated animate-fade-in">
@@ -58,7 +67,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         <h3 className="font-semibold text-foreground line-clamp-2 mb-2 group-hover:text-primary transition-colors">
           {product.name}
         </h3>
-
+        <span className="text-sm text-muted-foreground">
+          {formatDistance(product.distance)}
+        </span>
         {/* Rating */}
         <div className="flex items-center gap-1 mb-3">
           <Star className="w-4 h-4 fill-accent text-accent" />

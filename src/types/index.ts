@@ -11,7 +11,10 @@ export interface Product {
   inStock: boolean;
   rating: number;
   reviewCount: number;
+  distance?: number;
   offer?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface Store {
@@ -30,6 +33,8 @@ export interface Store {
   phone?: string;
   email?: string;
   deliveryLocations?: string[];
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface CartItem {

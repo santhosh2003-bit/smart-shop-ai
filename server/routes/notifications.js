@@ -13,17 +13,24 @@ router.get('/', async (req, res) => {
         // In reality, req.user would be populated by middleware.
         // We'll trust the frontend sending a query param for now or just fetch global + user specific
         // But since I don't have middleware here shown, I'll update it to accept a query param userId
-        const { userId } = req.query;
-        console.log(`Fetching notifications for userId: ${userId}`);
+        const { userId, role } = req.query;
+        console.log(`Fetching notifications for userId: ${userId}, role: ${role}`);
 
-        let query = 'SELECT * FROM notifications WHERE userId IS NULL';
+        let query = 'SELECT * FROM notifications';
         let params = [];
 
-        if (userId && userId !== 'undefined' && userId !== 'null') {
-            query += ' OR userId = ?';
-            params.push(userId);
+        if (role === 'admin') {
+            // Admin sees all
+            query += ' ORDER BY createdAt DESC LIMIT 50';
+        } else {
+            // Regular User / Store Owner
+            query += ' WHERE userId IS NULL';
+            if (userId && userId !== 'undefined' && userId !== 'null') {
+                query += ' OR userId = ?';
+                params.push(userId);
+            }
+            query += ' ORDER BY createdAt DESC LIMIT 20';
         }
-        query += ' ORDER BY createdAt DESC LIMIT 20';
 
         const [rows] = await pool.query(query, params);
         res.json(rows);

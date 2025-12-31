@@ -16,16 +16,16 @@ interface StoreContextType {
   stores: Store[];
   products: Product[];
   categories: Category[];
-  addStore: (store: Omit<Store, 'id' | 'rating' | 'reviewCount'>) => Store;
-  updateStore: (id: string, data: Partial<Store>) => void;
+  addStore: (store: Omit<Store, 'id' | 'rating' | 'reviewCount'> | FormData) => Promise<Store>;
+  updateStore: (id: string, data: Partial<Store> | FormData) => void;
   deleteStore: (id: string) => void;
   approveStore: (id: string) => void;
   rejectStore: (id: string) => void;
   getStoresByOwner: (ownerId: string) => Store[];
   getApprovedStores: () => Store[];
   getPendingStores: () => Store[];
-  addProduct: (product: Omit<Product, 'id' | 'rating' | 'reviewCount'>) => void;
-  updateProduct: (id: string, data: Partial<Product>) => void;
+  addProduct: (product: Omit<Product, 'id' | 'rating' | 'reviewCount'> | FormData) => void;
+  updateProduct: (id: string, data: Partial<Product> | FormData) => void;
   deleteProduct: (id: string) => void;
   getProductsByStore: (storeId: string) => Product[];
   getProductsByOwner: (ownerId: string) => Product[];
@@ -60,12 +60,16 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     fetchData();
   }, []);
 
-  const addStore = async (storeData: Omit<Store, 'id' | 'rating' | 'reviewCount'>): Promise<Store> => {
+  const addStore = async (storeData: Omit<Store, 'id' | 'rating' | 'reviewCount'> | FormData): Promise<Store> => {
     try {
+      const isFormData = storeData instanceof FormData;
+      const headers: Record<string, string> = isFormData ? {} : { 'Content-Type': 'application/json' };
+      const body = isFormData ? storeData : JSON.stringify(storeData);
+
       const res = await fetch('/api/stores', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(storeData),
+        headers,
+        body,
       });
       const newStore = await res.json();
       setStores(prev => [newStore, ...prev]);
@@ -76,12 +80,16 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  const updateStore = async (id: string, data: Partial<Store>) => {
+  const updateStore = async (id: string, data: Partial<Store> | FormData) => {
     try {
+      const isFormData = data instanceof FormData;
+      const headers: Record<string, string> = isFormData ? {} : { 'Content-Type': 'application/json' };
+      const body = isFormData ? data : JSON.stringify(data);
+
       const res = await fetch(`/api/stores/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        headers,
+        body,
       });
       if (res.ok) {
         const updated = await res.json();
@@ -125,34 +133,48 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return stores.filter(s => s.status === 'pending');
   };
 
-  const addProduct = async (productData: Omit<Product, 'id' | 'rating' | 'reviewCount'>) => {
+  const addProduct = async (productData: any) => {
     try {
+      const isFormData = productData instanceof FormData;
+      const headers: Record<string, string> = isFormData ? {} : { 'Content-Type': 'application/json' };
+      const body = isFormData ? productData : JSON.stringify(productData);
+
       const res = await fetch('/api/products', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(productData),
+        headers,
+        body,
       });
+
+      if (!res.ok) throw new Error('Failed to add product');
+
       const newProduct = await res.json();
       setProducts(prev => [newProduct, ...prev]);
       toast.success('Product added successfully');
     } catch (error) {
+      console.error(error);
       toast.error('Failed to add product');
     }
   };
 
-  const updateProduct = async (id: string, data: Partial<Product>) => {
+  const updateProduct = async (id: string, data: any) => {
     try {
+      const isFormData = data instanceof FormData;
+      const headers: Record<string, string> = isFormData ? {} : { 'Content-Type': 'application/json' };
+      const body = isFormData ? data : JSON.stringify(data);
+
       const res = await fetch(`/api/products/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        headers,
+        body,
       });
-      if (res.ok) {
-        const updated = await res.json();
-        setProducts(prev => prev.map(p => p.id === id ? updated : p));
-        toast.success('Product updated successfully');
-      }
+
+      if (!res.ok) throw new Error('Failed to update product');
+
+      const updated = await res.json();
+      setProducts(prev => prev.map(p => p.id === id ? updated : p));
+      toast.success('Product updated successfully');
     } catch (error) {
+      console.error(error);
       toast.error('Failed to update product');
     }
   };
@@ -173,7 +195,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const getProductsByOwner = (ownerId: string) => {
     const ownerStoreIds = stores.filter(s => s.ownerId === ownerId).map(s => s.id);
-    return products.filter(p => ownerStoreIds.includes(p.store.id));
+    return products.filter(p => p.store && ownerStoreIds.includes(p.store.id));
   };
 
   return (

@@ -42,6 +42,7 @@ const AdminProducts: React.FC = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string>('');
 
   // Form state
@@ -62,8 +63,8 @@ const AdminProducts: React.FC = () => {
         p.category.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = categoryFilter === 'all' || p.category === categoryFilter;
       const matchesStore = storeFilter === 'all' || p.store?.id === storeFilter;
-      const matchesStock = stockFilter === 'all' || 
-        (stockFilter === 'instock' && p.inStock) || 
+      const matchesStock = stockFilter === 'all' ||
+        (stockFilter === 'instock' && p.inStock) ||
         (stockFilter === 'outofstock' && !p.inStock);
       return matchesSearch && matchesCategory && matchesStore && matchesStock;
     }
@@ -82,6 +83,7 @@ const AdminProducts: React.FC = () => {
     });
     setImagePreview('');
     setImageUrl('');
+    setImageFile(null);
     setEditingProduct(null);
   };
 
@@ -100,6 +102,7 @@ const AdminProducts: React.FC = () => {
       });
       setImagePreview(product.image);
       setImageUrl(product.image);
+      setImageFile(null);
     } else {
       resetForm();
     }
@@ -109,6 +112,7 @@ const AdminProducts: React.FC = () => {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setImageFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
@@ -130,34 +134,30 @@ const AdminProducts: React.FC = () => {
     const originalPrice = formData.originalPrice ? parseFloat(formData.originalPrice) : undefined;
     const discount = originalPrice ? Math.round(((originalPrice - price) / originalPrice) * 100) : undefined;
 
-    const finalImage = imagePreview || imageUrl || 'https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=400';
+    const data = new FormData();
+    data.append('name', formData.name);
+    data.append('description', formData.description);
+    data.append('price', price.toString());
+    if (originalPrice) data.append('originalPrice', originalPrice.toString());
+    if (discount) data.append('discount', discount.toString());
+    data.append('category', formData.category);
+    data.append('storeId', formData.storeId);
+    if (formData.offer) data.append('offer', formData.offer);
+    data.append('inStock', formData.inStock ? '1' : '0'); // Send as string/number for FormData
+
+    if (imageFile) {
+      data.append('image', imageFile);
+    } else if (imageUrl) {
+      data.append('image', imageUrl); // Existing URL or manual URL
+    } else if (!editingProduct) {
+      // Default image if new product and no image
+      data.append('image', 'https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=400');
+    }
 
     if (editingProduct) {
-      updateProduct(editingProduct.id, {
-        name: formData.name,
-        description: formData.description,
-        price,
-        originalPrice,
-        discount,
-        category: formData.category,
-        store,
-        offer: formData.offer || undefined,
-        inStock: formData.inStock,
-        image: finalImage,
-      });
+      updateProduct(editingProduct.id, data);
     } else {
-      addProduct({
-        name: formData.name,
-        description: formData.description,
-        price,
-        originalPrice,
-        discount,
-        image: finalImage,
-        category: formData.category,
-        store,
-        inStock: formData.inStock,
-        offer: formData.offer || undefined,
-      });
+      addProduct(data);
     }
 
     setIsDialogOpen(false);

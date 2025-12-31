@@ -13,10 +13,25 @@ const StoreDashboard: React.FC = () => {
   const { user } = useAuth();
   const { getStoresByOwner, getProductsByOwner } = useStore();
 
-  const userStores = user ? getStoresByOwner(user.id) : [];
-  const userProducts = user ? getProductsByOwner(user.id) : [];
-  const approvedStore = userStores.find(s => s.status === 'approved');
-  const pendingStore = userStores.find(s => s.status === 'pending');
+  const userStores = user?.role === 'admin'
+    ? useStore().stores
+    : (user ? getStoresByOwner(user.id) : []);
+
+  // For Admin: show all products? Or just summary?
+  // Prompt: "admin should show all... actions... users also have to see but admin can do the actions"
+  // For dashboard stats, admin sees global stats. Store owner sees store stats.
+  const userProducts = user?.role === 'admin'
+    ? useStore().products
+    : (user ? getProductsByOwner(user.id) : []);
+
+  const approvedStore = user?.role === 'admin'
+    ? userStores[0] // Just show first for admin or irrelevant in this view? Admin might need a different dashboard. 
+    // But for now, let's treat admin as super-owner of everything or just show global stats.
+    // If admin, we probably shouldn't assume they have "a store". 
+    // However, to keep this page working, let's assume global scope.
+    : userStores.find(s => s.status === 'approved');
+
+  const pendingStore = user?.role === 'admin' ? null : userStores.find(s => s.status === 'pending');
   const hasStore = userStores.length > 0;
 
   const stats = [

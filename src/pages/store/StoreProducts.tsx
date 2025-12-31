@@ -38,21 +38,32 @@ import { toast } from 'sonner';
 import PosterUploader from '@/components/store/PosterUploader';
 import ImageUpload from '@/components/ui/ImageUpload';
 
+import LocationPicker from '@/components/store/LocationPicker';
+
 const StoreProducts: React.FC = () => {
   const { user } = useAuth();
-  const { categories, getStoresByOwner, getProductsByOwner, addProduct, updateProduct, deleteProduct } = useStore();
+  const { categories, getStoresByOwner, getProductsByOwner, addProduct, updateProduct, deleteProduct, products, stores } = useStore();
   const { addNotification } = useNotifications();
 
-  const userStores = user ? getStoresByOwner(user.id) : [];
-  const approvedStore = userStores.find(s => s.status === 'approved');
-  const userProducts = user ? getProductsByOwner(user.id) : [];
+  const userStores = user?.role === 'admin' ? stores : (user ? getStoresByOwner(user.id) : []);
+  const approvedStore = user?.role === 'admin' ? userStores[0] : userStores.find(s => s.status === 'approved');
+  const userProducts = user?.role === 'admin' ? products : (user ? getProductsByOwner(user.id) : []);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    description: string;
+    price: string;
+    originalPrice: string;
+    category: string;
+    offer: string;
+    inStock: boolean;
+    location?: { lat: number; lng: number } | null;
+  }>({
     name: '',
     description: '',
     price: '',
@@ -60,6 +71,7 @@ const StoreProducts: React.FC = () => {
     category: '',
     offer: '',
     inStock: true,
+    location: null
   });
 
   const filteredProducts = userProducts.filter(
@@ -77,6 +89,9 @@ const StoreProducts: React.FC = () => {
       category: '',
       offer: '',
       inStock: true,
+      location: approvedStore && approvedStore.latitude && approvedStore.longitude
+        ? { lat: approvedStore.latitude, lng: approvedStore.longitude }
+        : null,
     });
     setImagePreview('');
     setEditingProduct(null);
@@ -93,6 +108,10 @@ const StoreProducts: React.FC = () => {
         category: product.category,
         offer: product.offer || '',
         inStock: product.inStock,
+        location: product.latitude && product.longitude
+          ? { lat: product.latitude, lng: product.longitude }
+          : (approvedStore && approvedStore.latitude && approvedStore.longitude
+            ? { lat: approvedStore.latitude, lng: approvedStore.longitude } : null)
       });
       setImagePreview(product.image);
     } else {
@@ -100,6 +119,8 @@ const StoreProducts: React.FC = () => {
     }
     setIsDialogOpen(true);
   };
+
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const handleImageChange = (value: string) => {
     setImagePreview(value);
@@ -114,7 +135,7 @@ const StoreProducts: React.FC = () => {
         price: p.price,
         originalPrice: undefined,
         discount: undefined,
-        image: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=400',
+        image: p.image || 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=400',
         category: 'Offers',
         store: approvedStore,
         inStock: true,
@@ -122,6 +143,10 @@ const StoreProducts: React.FC = () => {
       });
     });
     toast.success(`Imported ${extractedProducts.length} products to inventory`);
+  };
+
+  const handleFileSelect = (file: File | null) => {
+    setSelectedFile(file);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -136,33 +161,44 @@ const StoreProducts: React.FC = () => {
     const originalPrice = formData.originalPrice ? parseFloat(formData.originalPrice) : undefined;
     const discount = originalPrice ? Math.round(((originalPrice - price) / originalPrice) * 100) : undefined;
 
+    const submissionData = new FormData();
+    submissionData.append('name', formData.name);
+    submissionData.append('description', formData.description);
+    submissionData.append('price', price.toString());
+    if (originalPrice) submissionData.append('originalPrice', originalPrice.toString());
+    if (discount) submissionData.append('discount', discount.toString());
+    submissionData.append('category', formData.category);
+    if (formData.offer) submissionData.append('offer', formData.offer);
+    submissionData.append('inStock', formData.inStock.toString());
+
+    if (formData.location) {
+      submissionData.append('latitude', formData.location.lat.toString());
+      submissionData.append('longitude', formData.location.lng.toString());
+    }
+
+    // For update vs create, backend handles storeId differently but cleaner to always send it?
+    // Creating: storeId is needed. Updating: storeId usually ignored or verified.
+    // Let's send it to be safe.
+    submissionData.append('storeId', approvedStore.id);
+
+    if (selectedFile) {
+      submissionData.append('image', selectedFile);
+    } else if (imagePreview) {
+      // If editing and no new file, backend might need to know to keep existing?
+      // Or if it's a URL (from OCR), backend handles it as string?
+      // Our backend logic: `if (req.file) ... else product.image`. 
+      // So we append 'image' as string if it's a URL.
+      submissionData.append('image', imagePreview);
+    }
+
     if (editingProduct) {
-      updateProduct(editingProduct.id, {
-        name: formData.name,
-        description: formData.description,
-        price,
-        originalPrice,
-        discount,
-        category: formData.category,
-        offer: formData.offer || undefined,
-        inStock: formData.inStock,
-        image: imagePreview || editingProduct.image,
-      });
+      updateProduct(editingProduct.id, submissionData);
+      toast.success('Product updated successfully');
     } else {
-      addProduct({
-        name: formData.name,
-        description: formData.description,
-        price,
-        originalPrice,
-        discount,
-        image: imagePreview || 'https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=400',
-        category: formData.category,
-        store: approvedStore,
-        inStock: formData.inStock,
-        offer: formData.offer || undefined,
-      });
-      
-      // Send notification for new product
+      addProduct(submissionData);
+
+      // Send notification for new product (handled in context/backend now generally, 
+      // but if we want optimistic FE changes we keep context calls as is.)
       addNotification({
         title: 'New Product Added!',
         message: `${formData.name} is now available at ${approvedStore.name}`,
@@ -174,6 +210,7 @@ const StoreProducts: React.FC = () => {
 
     setIsDialogOpen(false);
     resetForm();
+    setSelectedFile(null);
   };
 
   const handleDelete = (id: string) => {
@@ -222,6 +259,7 @@ const StoreProducts: React.FC = () => {
                   label="Product Image"
                   value={imagePreview}
                   onChange={handleImageChange}
+                  onFileSelect={handleFileSelect}
                   placeholder="Upload Image"
                 />
 
@@ -263,6 +301,15 @@ const StoreProducts: React.FC = () => {
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     rows={3}
                     required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Product Location (Optional - Overrides Store Location)</Label>
+                  <LocationPicker
+                    value={formData.location}
+                    onChange={(loc) => setFormData({ ...formData, location: loc })}
+                    label={formData.location ? "Update Location" : "Pick on Map"}
                   />
                 </div>
 

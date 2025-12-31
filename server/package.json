@@ -5,23 +5,29 @@
     "main": "index.js",
     "type": "module",
     "scripts": {
-        "start": "nodemon index.js",
+        "start": "nodemon index.js --ignore uploads/",
         "dev": "node --watch index.js",
         "init-db": "node scripts/initDb.js"
     },
     "dependencies": {
         "bcryptjs": "^2.4.3",
         "cors": "^2.8.5",
+        "date-fns": "^4.1.0",
         "dotenv": "^16.4.5",
         "express": "^4.19.2",
+        "jimp": "^1.6.0",
         "jsonwebtoken": "^9.0.2",
+        "leaflet": "^1.9.4",
         "multer": "^2.0.2",
         "mysql2": "^3.11.0",
         "node-fetch": "^3.3.2",
+        "react-leaflet": "^5.0.0",
         "socket.io": "^4.8.2",
         "tesseract.js": "^7.0.0"
     },
     "devDependencies": {
+        "@types/leaflet": "^1.9.21",
+        "form-data": "^4.0.5",
         "nodemon": "^3.1.11"
     }
 }

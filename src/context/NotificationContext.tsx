@@ -49,9 +49,13 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       try {
         // If we have a user stored in localStorage (handled by AuthContext generally)
         const storedUser = localStorage.getItem('user');
-        const userId = storedUser ? JSON.parse(storedUser).id : null;
+        const parsedUser = storedUser ? JSON.parse(storedUser) : null;
+        const userId = parsedUser ? parsedUser.id : null;
+        const role = parsedUser ? parsedUser.role : 'user'; // Default to user
 
-        const url = userId ? `/api/notifications?userId=${userId}` : '/api/notifications';
+        if (!userId) return; // Don't fetch if no user
+
+        const url = `/api/notifications?userId=${userId}&role=${role}`;
         const res = await fetch(url);
         const data = await res.json();
 

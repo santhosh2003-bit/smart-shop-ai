@@ -29,11 +29,18 @@ router.post('/:id/poster', upload.single('poster'), async (req, res) => {
             return res.status(400).json({ message: 'No image uploaded' });
         }
 
-        const products = await parsePoster(req.file.path);
+        const { products, storeInfo } = await parsePoster(req.file.path);
+
+        // Update Store Address if found
+        if (storeInfo && storeInfo.address) {
+            console.log(`Updating store ${req.params.id} address to: ${storeInfo.address}`);
+            await pool.query('UPDATE stores SET address = ? WHERE id = ?', [storeInfo.address, req.params.id]);
+        }
+
         res.json(products);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'OCR failed' });
+        res.status(500).json({ message: 'OCR failed', error: error.message });
     }
 });
 
@@ -66,19 +73,25 @@ router.get('/', async (req, res) => {
 });
 
 // Create Store
-router.post('/', async (req, res) => {
+router.post('/', upload.single('logo'), async (req, res) => {
     try {
         const store = req.body;
         const id = Date.now().toString();
+
+        // Handle Logo
+        let logoPath = store.logo;
+        if (req.file) {
+            logoPath = `http://localhost:${process.env.PORT || 3000}/uploads/${req.file.filename}`;
+        }
+
         const query = 'INSERT INTO stores (id, name, logo, rating, reviewCount, distance, deliveryTime, address, isOpen, status, ownerId, description, phone, email) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
         const values = [
-            id, store.name, store.logo, 0, 0, store.distance, store.deliveryTime, store.address,
+            id, store.name, logoPath, 0, 0, store.distance, store.deliveryTime, store.address,
             true, 'pending', store.ownerId, store.description, store.phone, store.email
         ];
 
         await pool.query(query, values);
 
-        // Fetch created store
         const [newStore] = await pool.query('SELECT * FROM stores WHERE id = ?', [id]);
         res.status(201).json(newStore[0]);
     } catch (error) {
@@ -88,10 +101,15 @@ router.post('/', async (req, res) => {
 });
 
 // Update Store
-router.put('/:id', async (req, res) => {
+router.put('/:id', upload.single('logo'), async (req, res) => {
     try {
         const { id } = req.params;
         const updates = req.body;
+
+        // Handle Logo
+        if (req.file) {
+            updates.logo = `http://localhost:${process.env.PORT || 3000}/uploads/${req.file.filename}`;
+        }
 
         // Build dynamic update query
         const fields = Object.keys(updates).map(key => `${key} = ?`).join(', ');
@@ -104,6 +122,7 @@ router.put('/:id', async (req, res) => {
         const [updatedStore] = await pool.query('SELECT * FROM stores WHERE id = ?', [id]);
         res.json(updatedStore[0]);
     } catch (error) {
+        console.error(error);
         res.status(500).json({ message: 'Server error' });
     }
 });

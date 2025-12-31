@@ -31,8 +31,8 @@ const Stores: React.FC = () => {
             <button
               key={i}
               className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${i === 0
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-card hover:bg-secondary card-elevated'
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-card hover:bg-secondary card-elevated'
                 }`}
             >
               {filter}
