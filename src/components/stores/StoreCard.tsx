@@ -2,7 +2,6 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Star, Clock, MapPin } from 'lucide-react';
 import { Store } from '@/types';
-import { cn } from '@/lib/utils';
 
 interface StoreCardProps {
   store: Store;
@@ -12,47 +11,46 @@ const StoreCard: React.FC<StoreCardProps> = ({ store }) => {
   return (
     <Link
       to={`/stores/${store.id}`}
-      className="group bg-card rounded-2xl overflow-hidden card-elevated animate-fade-in"
+      className="group flex gap-4 bg-card rounded-xl p-4 border border-border hover:border-primary/20 transition-all hover:shadow-md"
     >
-      {/* Header with logo */}
-      <div className="relative h-24 bg-gradient-to-br from-primary/10 to-accent/10">
-        <img
-          src={store.logo}
-          alt={store.name}
-          className="absolute bottom-0 left-4 translate-y-1/2 w-16 h-16 rounded-xl object-cover border-4 border-card shadow-lg"
-        />
-        {store.isOpen ? (
-          <span className="absolute top-3 right-3 px-2.5 py-1 rounded-lg fresh-badge text-xs font-semibold text-primary-foreground">
-            Open Now
-          </span>
-        ) : (
-          <span className="absolute top-3 right-3 px-2.5 py-1 rounded-lg bg-muted text-xs font-semibold text-muted-foreground">
-            Closed
-          </span>
-        )}
-      </div>
+      {/* Logo */}
+      <img
+        src={store.logo}
+        alt={store.name}
+        className="w-16 h-16 rounded-xl object-cover shrink-0"
+      />
 
       {/* Content */}
-      <div className="pt-10 p-4">
-        <h3 className="font-semibold text-lg text-foreground group-hover:text-primary transition-colors">
-          {store.name}
-        </h3>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start justify-between gap-2">
+          <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors truncate">
+            {store.name}
+          </h3>
+          {store.isOpen ? (
+            <span className="shrink-0 px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-medium">
+              Open
+            </span>
+          ) : (
+            <span className="shrink-0 px-2 py-0.5 rounded-md bg-muted text-muted-foreground text-xs font-medium">
+              Closed
+            </span>
+          )}
+        </div>
         
-        <div className="flex items-center gap-4 mt-2 text-sm">
+        <div className="flex items-center gap-3 mt-1.5 text-sm">
           <div className="flex items-center gap-1">
-            <Star className="w-4 h-4 fill-accent text-accent" />
-            <span className="font-medium">{store.rating}</span>
-            <span className="text-muted-foreground">({store.reviewCount})</span>
+            <Star className="w-3.5 h-3.5 fill-accent text-accent" />
+            <span className="font-medium text-xs">{store.rating}</span>
           </div>
           <div className="flex items-center gap-1 text-muted-foreground">
-            <Clock className="w-4 h-4" />
-            <span>{store.deliveryTime}</span>
+            <Clock className="w-3.5 h-3.5" />
+            <span className="text-xs">{store.deliveryTime}</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-1 mt-2 text-sm text-muted-foreground">
-          <MapPin className="w-4 h-4" />
-          <span>{store.distance} • {store.address}</span>
+        <div className="flex items-center gap-1 mt-1.5 text-xs text-muted-foreground">
+          <MapPin className="w-3.5 h-3.5 shrink-0" />
+          <span className="truncate">{store.distance} • {store.address}</span>
         </div>
       </div>
     </Link>

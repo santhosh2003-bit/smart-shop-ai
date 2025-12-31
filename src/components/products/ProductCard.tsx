@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Star, Heart } from 'lucide-react';
+import { Plus, Star, MapPin } from 'lucide-react';
 import { Product } from '@/types';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/context/CartContext';
@@ -11,78 +11,71 @@ interface ProductCardProps {
 
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const { addToCart } = useCart();
-  const formatDistance = (distance?: number) => {
-    if (!Number.isFinite(distance)) return "N/A";
-
-    if (distance < 1) {
-      return `${(distance * 1000).toFixed(0)} m`;
-    }
-
-    return `${distance.toFixed(2)} km`;
+  
+  const formatDistance = (distance?: number | null) => {
+    if (!distance || !Number.isFinite(distance)) return null;
+    if (distance < 1) return `${(distance * 1000).toFixed(0)}m away`;
+    return `${distance.toFixed(1)}km away`;
   };
 
+  const distanceText = formatDistance(product.distance);
+
   return (
-    <div className="group bg-card rounded-2xl overflow-hidden card-elevated animate-fade-in">
-      {/* Image container */}
+    <div className="group bg-card rounded-xl overflow-hidden border border-border hover:border-primary/20 transition-all hover:shadow-lg">
+      {/* Image */}
       <div className="relative aspect-square overflow-hidden bg-secondary/30">
         <img
           src={product.image}
           alt={product.name}
-          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
         />
-
-        {/* Offer badge */}
-        {product.offer && (
-          <span className="absolute top-3 left-3 px-2.5 py-1 rounded-lg deal-badge text-xs font-semibold text-accent-foreground">
-            {product.offer}
-          </span>
-        )}
-
+        
         {/* Discount badge */}
         {product.discount && (
-          <span className="absolute top-3 right-3 px-2.5 py-1 rounded-lg bg-primary text-primary-foreground text-xs font-bold">
+          <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-destructive text-destructive-foreground text-xs font-bold">
             -{product.discount}%
           </span>
         )}
-
-        {/* Wishlist button */}
-        <button className="absolute bottom-3 right-3 w-9 h-9 rounded-full glass flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-destructive-foreground">
-          <Heart className="w-4 h-4" />
-        </button>
       </div>
 
       {/* Content */}
-      <div className="p-4">
-        {/* Store info */}
-        <div className="flex items-center gap-2 mb-2">
-          <img
-            src={product.store.logo}
-            alt={product.store.name}
-            className="w-5 h-5 rounded-full object-cover"
-          />
-          <span className="text-xs text-muted-foreground">{product.store.name}</span>
+      <div className="p-3">
+        {/* Store & Distance */}
+        <div className="flex items-center justify-between gap-2 mb-1.5">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <img
+              src={product.store.logo}
+              alt={product.store.name}
+              className="w-4 h-4 rounded-full object-cover shrink-0"
+            />
+            <span className="text-xs text-muted-foreground truncate">{product.store.name}</span>
+          </div>
+          {distanceText && (
+            <div className="flex items-center gap-0.5 text-xs text-primary shrink-0">
+              <MapPin className="w-3 h-3" />
+              <span>{distanceText}</span>
+            </div>
+          )}
         </div>
 
         {/* Product name */}
-        <h3 className="font-semibold text-foreground line-clamp-2 mb-2 group-hover:text-primary transition-colors">
+        <h3 className="font-medium text-sm text-foreground line-clamp-2 mb-1.5 min-h-[2.5rem]">
           {product.name}
         </h3>
-        <span className="text-sm text-muted-foreground">
-          {formatDistance(product.distance)}
-        </span>
+
         {/* Rating */}
-        <div className="flex items-center gap-1 mb-3">
-          <Star className="w-4 h-4 fill-accent text-accent" />
-          <span className="text-sm font-medium">{product.rating}</span>
+        <div className="flex items-center gap-1 mb-2">
+          <Star className="w-3.5 h-3.5 fill-accent text-accent" />
+          <span className="text-xs font-medium">{product.rating}</span>
           <span className="text-xs text-muted-foreground">({product.reviewCount})</span>
         </div>
 
         {/* Price and Add button */}
         <div className="flex items-center justify-between">
-          <div className="flex items-baseline gap-2">
-            <span className="text-lg font-bold text-foreground">${product?.price}</span>
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-base font-bold text-foreground">${product.price}</span>
             {product.originalPrice && (
-              <span className="text-sm text-muted-foreground line-through">
+              <span className="text-xs text-muted-foreground line-through">
                 ${product.originalPrice}
               </span>
             )}
@@ -91,12 +84,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             size="icon"
             onClick={() => addToCart(product)}
             className={cn(
-              "w-9 h-9 rounded-xl",
+              "w-8 h-8 rounded-lg",
               product.inStock ? "bg-primary hover:bg-primary/90" : "bg-muted"
             )}
             disabled={!product.inStock}
           >
-            <Plus className="w-5 h-5" />
+            <Plus className="w-4 h-4" />
           </Button>
         </div>
       </div>

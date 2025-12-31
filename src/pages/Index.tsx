@@ -3,7 +3,6 @@ import { Helmet } from 'react-helmet-async';
 import Layout from '@/components/layout/Layout';
 import HeroSection from '@/components/home/HeroSection';
 import DealsSection from '@/components/home/DealsSection';
-import CategoriesSection from '@/components/home/CategoriesSection';
 import StoresSection from '@/components/home/StoresSection';
 
 const Index: React.FC = () => {
@@ -16,7 +15,6 @@ const Index: React.FC = () => {
       
       <HeroSection />
       <DealsSection />
-      <CategoriesSection />
       <StoresSection />
     </Layout>
   );
