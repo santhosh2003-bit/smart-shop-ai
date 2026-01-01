@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Star, Clock, MapPin } from 'lucide-react';
+import { Star, Clock, MapPin, ChevronRight, Bike } from 'lucide-react';
 import { Store } from '@/types';
 
 interface StoreCardProps {
@@ -11,46 +11,65 @@ const StoreCard: React.FC<StoreCardProps> = ({ store }) => {
   return (
     <Link
       to={`/stores/${store.id}`}
-      className="group flex gap-4 bg-card rounded-xl p-4 border border-border hover:border-primary/20 transition-all hover:shadow-md"
+      className="group block bg-card rounded-2xl overflow-hidden border border-border hover:border-primary/30 transition-all duration-300 card-elevated"
     >
-      {/* Logo */}
-      <img
-        src={store.logo}
-        alt={store.name}
-        className="w-16 h-16 rounded-xl object-cover shrink-0"
-      />
-
-      {/* Content */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors truncate">
-            {store.name}
-          </h3>
+      {/* Cover image / banner area */}
+      <div className="relative h-24 bg-gradient-to-r from-primary/20 to-accent/20 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-t from-card to-transparent" />
+        
+        {/* Status badge */}
+        <div className="absolute top-3 right-3">
           {store.isOpen ? (
-            <span className="shrink-0 px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-medium">
-              Open
+            <span className="px-3 py-1 rounded-full bg-primary text-primary-foreground text-xs font-bold shadow-lg flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 bg-primary-foreground rounded-full animate-pulse" />
+              Open Now
             </span>
           ) : (
-            <span className="shrink-0 px-2 py-0.5 rounded-md bg-muted text-muted-foreground text-xs font-medium">
+            <span className="px-3 py-1 rounded-full bg-muted text-muted-foreground text-xs font-bold">
               Closed
             </span>
           )}
         </div>
         
-        <div className="flex items-center gap-3 mt-1.5 text-sm">
-          <div className="flex items-center gap-1">
-            <Star className="w-3.5 h-3.5 fill-accent text-accent" />
-            <span className="font-medium text-xs">{store.rating}</span>
+        {/* Logo - positioned to overlap */}
+        <div className="absolute -bottom-8 left-4">
+          <img
+            src={store.logo}
+            alt={store.name}
+            className="w-16 h-16 rounded-2xl object-cover border-4 border-card shadow-lg group-hover:scale-105 transition-transform"
+          />
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="pt-10 px-4 pb-4">
+        <div className="flex items-start justify-between gap-2 mb-3">
+          <h3 className="font-bold text-lg text-foreground group-hover:text-primary transition-colors line-clamp-1">
+            {store.name}
+          </h3>
+          <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all shrink-0" />
+        </div>
+        
+        {/* Stats row */}
+        <div className="flex items-center gap-4 mb-3">
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-accent/10">
+            <Star className="w-4 h-4 fill-accent text-accent" />
+            <span className="text-sm font-bold text-accent">{store.rating}</span>
           </div>
-          <div className="flex items-center gap-1 text-muted-foreground">
-            <Clock className="w-3.5 h-3.5" />
-            <span className="text-xs">{store.deliveryTime}</span>
+          <div className="flex items-center gap-1.5 text-muted-foreground">
+            <Clock className="w-4 h-4" />
+            <span className="text-sm font-medium">{store.deliveryTime}</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-muted-foreground">
+            <Bike className="w-4 h-4" />
+            <span className="text-sm font-medium">{store.distance}</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-1 mt-1.5 text-xs text-muted-foreground">
-          <MapPin className="w-3.5 h-3.5 shrink-0" />
-          <span className="truncate">{store.distance} • {store.address}</span>
+        {/* Address */}
+        <div className="flex items-start gap-2 text-muted-foreground">
+          <MapPin className="w-4 h-4 shrink-0 mt-0.5" />
+          <span className="text-sm line-clamp-1">{store.address}</span>
         </div>
       </div>
     </Link>
