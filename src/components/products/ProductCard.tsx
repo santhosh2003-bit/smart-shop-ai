@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Star } from 'lucide-react';
+import { Plus, Star, Check } from 'lucide-react';
 import { Product } from '@/types';
 import { useCart } from '@/context/CartContext';
 import { cn } from '@/lib/utils';
@@ -9,7 +9,8 @@ interface ProductCardProps {
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
-  const { addToCart } = useCart();
+  const { addToCart, items } = useCart();
+  const isInCart = items.some(item => item.product.id === product.id);
   
   const formatDistance = (distance?: number | null) => {
     if (!distance || !Number.isFinite(distance)) return null;
@@ -20,63 +21,61 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const distanceText = formatDistance(product.distance);
 
   return (
-    <div className="bg-card rounded-xl overflow-hidden border border-border">
+    <div className="group relative bg-card rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-shadow duration-300">
       {/* Image */}
-      <div className="relative aspect-square bg-secondary/50">
+      <div className="relative aspect-[4/3] overflow-hidden">
         <img
           src={product.image}
           alt={product.name}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />
+        
+        {/* Discount */}
         {product.discount && (
-          <span className="absolute top-2 left-2 px-2 py-0.5 rounded bg-destructive text-destructive-foreground text-xs font-bold">
-            -{product.discount}%
-          </span>
+          <div className="absolute top-3 left-3 px-2.5 py-1 rounded-lg bg-accent text-accent-foreground text-xs font-bold">
+            {product.discount}% OFF
+          </div>
         )}
+
+        {/* Add button */}
+        <button
+          onClick={() => addToCart(product)}
+          disabled={!product.inStock || isInCart}
+          className={cn(
+            "absolute bottom-3 right-3 w-10 h-10 rounded-xl flex items-center justify-center shadow-lg transition-all",
+            isInCart 
+              ? "bg-primary text-primary-foreground" 
+              : product.inStock 
+                ? "bg-white text-primary hover:bg-primary hover:text-white"
+                : "bg-muted text-muted-foreground"
+          )}
+        >
+          {isInCart ? <Check className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+        </button>
       </div>
 
       {/* Content */}
-      <div className="p-3">
-        <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
-          <span className="truncate">{product.store.name}</span>
-          {distanceText && (
-            <>
-              <span>•</span>
-              <span>{distanceText}</span>
-            </>
-          )}
+      <div className="p-4">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+          <span>{product.store.name}</span>
+          {distanceText && <span>• {distanceText}</span>}
         </div>
 
-        <h3 className="font-medium text-sm line-clamp-2 mb-2 min-h-[2.5rem]">
+        <h3 className="font-semibold text-foreground line-clamp-2 mb-3 group-hover:text-primary transition-colors">
           {product.name}
         </h3>
 
-        <div className="flex items-center gap-1 mb-2">
-          <Star className="w-3 h-3 fill-accent text-accent" />
-          <span className="text-xs font-medium">{product.rating}</span>
-        </div>
-
         <div className="flex items-center justify-between">
-          <div>
-            <span className="font-bold">${product.price}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-lg font-bold">${product.price}</span>
             {product.originalPrice && (
-              <span className="text-xs text-muted-foreground line-through ml-1">
-                ${product.originalPrice}
-              </span>
+              <span className="text-sm text-muted-foreground line-through">${product.originalPrice}</span>
             )}
           </div>
-          <button
-            onClick={() => addToCart(product)}
-            disabled={!product.inStock}
-            className={cn(
-              "w-8 h-8 rounded-full flex items-center justify-center transition-colors",
-              product.inStock 
-                ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-                : "bg-muted text-muted-foreground"
-            )}
-          >
-            <Plus className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-1 text-xs">
+            <Star className="w-3.5 h-3.5 fill-accent text-accent" />
+            <span className="font-medium">{product.rating}</span>
+          </div>
         </div>
       </div>
     </div>
