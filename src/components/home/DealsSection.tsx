@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, MapPin, Filter, X, Flame, Percent, SlidersHorizontal } from 'lucide-react';
+import { ChevronRight, MapPin, SlidersHorizontal, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ProductCard from '@/components/products/ProductCard';
 import { useStore } from '@/context/StoreContext';
@@ -81,144 +81,129 @@ const DealsSection: React.FC = () => {
     });
 
   return (
-    <section className="py-10">
+    <section className="py-6">
       <div className="container mx-auto px-4">
-        {/* Section header with location */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <div className="p-2 rounded-xl bg-gradient-to-br from-accent to-destructive">
-                <Flame className="w-5 h-5 text-white" />
+        {/* Categories horizontal scroll */}
+        <div className="mb-6">
+          <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-hide">
+            <button
+              onClick={() => setActiveCategory(null)}
+              className={`flex flex-col items-center gap-2 min-w-[72px] p-3 rounded-xl transition-all ${
+                !activeCategory ? 'bg-primary/10' : 'hover:bg-secondary'
+              }`}
+            >
+              <div className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl ${
+                !activeCategory ? 'bg-primary text-primary-foreground' : 'bg-secondary'
+              }`}>
+                🛒
               </div>
-              <h2 className="text-2xl md:text-3xl font-bold">Hot Deals Near You</h2>
-            </div>
+              <span className={`text-xs font-medium ${!activeCategory ? 'text-primary' : 'text-muted-foreground'}`}>
+                All
+              </span>
+            </button>
+            {categories.map((category) => (
+              <button
+                key={category.id}
+                onClick={() => setActiveCategory(category.id)}
+                className={`flex flex-col items-center gap-2 min-w-[72px] p-3 rounded-xl transition-all ${
+                  activeCategory === category.id ? 'bg-primary/10' : 'hover:bg-secondary'
+                }`}
+              >
+                <div className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl ${
+                  activeCategory === category.id ? 'bg-primary text-primary-foreground' : 'bg-secondary'
+                }`}>
+                  {category.icon}
+                </div>
+                <span className={`text-xs font-medium text-center ${
+                  activeCategory === category.id ? 'text-primary' : 'text-muted-foreground'
+                }`}>
+                  {category.name}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Location + Filter bar */}
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-2">
             {userLocation && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
+              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                 <MapPin className="w-4 h-4 text-primary" />
-                <span>Showing products sorted by distance</span>
+                <span>Near you</span>
               </div>
             )}
           </div>
-          <Link to="/products">
-            <Button variant="outline" className="gap-2 rounded-xl">
-              View All Products <ArrowRight className="w-4 h-4" />
-            </Button>
-          </Link>
-        </div>
-
-        {/* Category tabs with modern styling */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-4 mb-6 scrollbar-hide">
-          <button
-            onClick={() => setActiveCategory(null)}
-            className={`shrink-0 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-              !activeCategory
-                ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25'
-                : 'bg-card border border-border text-foreground hover:bg-secondary'
-            }`}
-          >
-            All Items
-          </button>
-          {categories.slice(0, 6).map((category) => (
-            <button
-              key={category.id}
-              onClick={() => setActiveCategory(category.id)}
-              className={`shrink-0 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
-                activeCategory === category.id
-                  ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25'
-                  : 'bg-card border border-border text-foreground hover:bg-secondary'
-              }`}
-            >
-              <span className="text-base">{category.icon}</span>
-              {category.name}
-            </button>
-          ))}
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => setShowFilters(!showFilters)}
-            className={`shrink-0 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
-              showFilters
-                ? 'bg-accent text-accent-foreground'
-                : 'bg-card border border-border text-foreground hover:bg-secondary'
-            }`}
+            className="gap-2 rounded-full"
           >
             <SlidersHorizontal className="w-4 h-4" />
             Filters
-          </button>
+          </Button>
         </div>
 
-        {/* Filters panel */}
+        {/* Filters */}
         {showFilters && (
-          <div className="bg-card rounded-2xl p-5 mb-8 border border-border shadow-lg animate-fade-in">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-primary" />
-                <span className="font-semibold">Filter Options</span>
-              </div>
-              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => setShowFilters(false)}>
+          <div className="bg-secondary/50 rounded-xl p-4 mb-5 animate-fade-in">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-medium">Filters</span>
+              <button onClick={() => setShowFilters(false)} className="p-1 hover:bg-secondary rounded">
                 <X className="w-4 h-4" />
-              </Button>
+              </button>
             </div>
-            <div className="flex flex-wrap gap-6">
-              <label className="flex items-center gap-3 cursor-pointer group">
-                <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all ${
-                  filters.onlyDeals ? 'bg-primary border-primary' : 'border-border group-hover:border-primary'
-                }`}>
-                  {filters.onlyDeals && <Percent className="w-3 h-3 text-primary-foreground" />}
-                </div>
+            <div className="flex flex-wrap gap-3">
+              <label className="flex items-center gap-2 cursor-pointer text-sm bg-card px-3 py-2 rounded-lg border border-border">
                 <input
                   type="checkbox"
                   checked={filters.onlyDeals}
                   onChange={(e) => setFilters({ ...filters, onlyDeals: e.target.checked })}
-                  className="sr-only"
+                  className="w-4 h-4 rounded accent-primary"
                 />
-                <span className="text-sm font-medium">Deals Only</span>
+                Deals Only
               </label>
-              <label className="flex items-center gap-3 cursor-pointer group">
-                <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all ${
-                  filters.inStock ? 'bg-primary border-primary' : 'border-border group-hover:border-primary'
-                }`}>
-                  {filters.inStock && <span className="w-2 h-2 bg-primary-foreground rounded-sm" />}
-                </div>
+              <label className="flex items-center gap-2 cursor-pointer text-sm bg-card px-3 py-2 rounded-lg border border-border">
                 <input
                   type="checkbox"
                   checked={filters.inStock}
                   onChange={(e) => setFilters({ ...filters, inStock: e.target.checked })}
-                  className="sr-only"
+                  className="w-4 h-4 rounded accent-primary"
                 />
-                <span className="text-sm font-medium">In Stock Only</span>
+                In Stock
               </label>
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-medium">Min Rating:</span>
-                <select
-                  value={filters.minRating}
-                  onChange={(e) => setFilters({ ...filters, minRating: Number(e.target.value) })}
-                  className="h-10 px-4 rounded-xl border border-border bg-background text-sm font-medium focus:border-primary focus:ring-1 focus:ring-primary"
-                >
-                  <option value={0}>Any Rating</option>
-                  <option value={4}>4+ Stars</option>
-                  <option value={4.5}>4.5+ Stars</option>
-                </select>
-              </div>
+              <select
+                value={filters.minRating}
+                onChange={(e) => setFilters({ ...filters, minRating: Number(e.target.value) })}
+                className="h-9 px-3 rounded-lg border border-border bg-card text-sm"
+              >
+                <option value={0}>Any Rating</option>
+                <option value={4}>4+ Stars</option>
+                <option value={4.5}>4.5+ Stars</option>
+              </select>
             </div>
           </div>
         )}
 
+        {/* Section header */}
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">Products</h2>
+          <Link to="/products" className="text-sm text-primary font-medium flex items-center gap-1">
+            See all <ChevronRight className="w-4 h-4" />
+          </Link>
+        </div>
+
         {/* Products grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
-          {filteredProducts.slice(0, 10).map((product, index) => (
-            <div key={product.id} className="animate-fade-in" style={{ animationDelay: `${index * 50}ms` }}>
-              <ProductCard product={product} />
-            </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+          {filteredProducts.slice(0, 10).map((product) => (
+            <ProductCard key={product.id} product={product} />
           ))}
         </div>
 
         {filteredProducts.length === 0 && (
-          <div className="text-center py-16">
-            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
-              <Filter className="w-8 h-8 text-muted-foreground" />
-            </div>
-            <h3 className="text-lg font-semibold mb-2">No products found</h3>
-            <p className="text-muted-foreground">Try adjusting your filters or category</p>
+          <div className="text-center py-12 text-muted-foreground">
+            <p>No products found</p>
           </div>
         )}
       </div>
