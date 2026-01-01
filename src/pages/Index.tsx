@@ -9,8 +9,8 @@ const Index: React.FC = () => {
   return (
     <Layout>
       <Helmet>
-        <title>DealFinder - Find the Best Deals Near You</title>
-        <meta name="description" content="Discover amazing deals and offers from stores near you. AI-powered product search with fast delivery and live tracking." />
+        <title>DealFinder - Best Deals Near You</title>
+        <meta name="description" content="Discover amazing deals and offers from stores near you. Fast delivery and live tracking." />
       </Helmet>
       
       <HeroSection />
